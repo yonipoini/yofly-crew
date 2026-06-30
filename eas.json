@@ -1,0 +1,37 @@
+{
+  "cli": {
+    "version": ">= 20.5.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ylmctmaedrcrmhjzymfi.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsbWN0bWFlZHJjcm1oanp5bWZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTY2MDEsImV4cCI6MjA4OTc3MjYwMX0.ZRiq7ikdr4AtxKUHmfg8DPO1mYQKw5MQ0Ww_n2Oh-MQ",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyB9vKASqiPS-xWAVBy5YlqOJLEvLwpA6iw",
+        "EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY": "AIzaSyAlg7cdd0Yp_kqKdf68y1cOD4xS7Lepy3U",
+        "EXPO_PUBLIC_GOOGLE_PLACES_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_PLACES_NATIVE_ENABLED": "true",
+        "EXPO_PUBLIC_GOOGLE_PLACES_RICH_DETAILS_ENABLED": "false",
+        "EXPO_PUBLIC_GOOGLE_PLACES_MAX_SESSION_REQUESTS": "100",
+        "EXPO_PUBLIC_GOOGLE_PLACES_RADIUS_METERS": "8000",
+        "EXPO_PUBLIC_GOOGLE_GEOCODING_ENABLED": "false",
+        "EXPO_PUBLIC_GOOGLE_GEOCODING_MAX_SESSION_REQUESTS": "3",
+        "EXPO_PUBLIC_USE_MAPBOX": "true",
+        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "YOUR_MAPBOX_ACCESS_TOKEN",
+        "EXPO_PUBLIC_DEFAULT_AIRPORT_CODE": "MCO"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
