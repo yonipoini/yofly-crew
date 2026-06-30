@@ -56,6 +56,7 @@ interface CrewMapboxViewProps {
   tempAlertCoordinate?: Coordinates | null;
   onTempAlertCoordinateChange?: (coordinate: Coordinates) => void;
   onAlertPress?: (alert: Alert) => void;
+  activeAirportCode: string;
 }
 
 export function CrewMapboxView({
@@ -79,6 +80,7 @@ export function CrewMapboxView({
   tempAlertCoordinate = null,
   onTempAlertCoordinateChange,
   onAlertPress,
+  activeAirportCode,
 }: CrewMapboxViewProps) {
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const cameraRef = useRef<Mapbox.Camera>(null);
@@ -743,11 +745,13 @@ export function CrewMapboxView({
       <View style={styles.actionControls}>
         {userLocation && (
           <TouchableOpacity style={styles.actionButton} onPress={handleLocateMe}>
-            <Ionicons name="navigate" size={18} color="#FFFFFF" />
+            <Ionicons name="navigate" size={16} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Me</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={handleRecenter}>
-          <Ionicons name="airplane-outline" size={18} color="#FFFFFF" />
+          <Ionicons name="airplane-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>{activeAirportCode}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -922,15 +926,16 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
       top: '54%',
       gap: 12,
       zIndex: 1000,
-      alignItems: 'center',
+      alignItems: 'flex-start',
     },
     actionButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      backgroundColor: theme.colors.accent,
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 18,
+      backgroundColor: theme.colors.accent,
+      gap: 6,
       shadowColor: theme.colors.overlay,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
@@ -939,5 +944,10 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
     },
     actionButtonSecondary: {
       backgroundColor: theme.colors.primary,
+    },
+    actionButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '800',
     },
   });

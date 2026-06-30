@@ -135,6 +135,7 @@ export function CrewMap({
     return (
       <View style={[styles.map, { width, height }]}>
         <CrewMapboxView
+          activeAirportCode={activeAirportCode}
           locations={locations}
           alerts={alerts}
           theme={theme}
