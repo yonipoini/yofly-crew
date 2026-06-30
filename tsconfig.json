@@ -1,6 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "moduleSuffixes": [".ios", ".native", ".android", ".web", ""]
+  },
+  "exclude": ["supabase/functions"]
 }
