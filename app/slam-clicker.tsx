@@ -464,6 +464,60 @@ export default function SlamClickerScreen() {
           </View>
         </View>
 
+        {/* Crew Sound & Sleep Music */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="musical-notes-outline" size={20} color={theme.colors.accent} />
+            <Text style={styles.cardTitle}>Sleep Music & White Noise</Text>
+          </View>
+          <Text style={styles.cardInfo}>
+            Launch sleep music, delta waves, or binaural beats to block out slamming hotel doors.
+          </Text>
+          <View style={styles.deliveryGrid}>
+            <TouchableOpacity
+              style={[styles.deliveryBtn, { backgroundColor: '#1DB954' }]}
+              onPress={() =>
+                handleLaunchDeliveryApp(
+                  'Spotify',
+                  'spotify://search/delta%20waves%20sleep',
+                  'https://open.spotify.com/search/delta%20waves%20sleep'
+                )
+              }
+            >
+              <Ionicons name="logo-spotify" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.deliveryText}>Spotify</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.deliveryBtn, { backgroundColor: '#FF0000' }]}
+              onPress={() =>
+                handleLaunchDeliveryApp(
+                  'YouTube',
+                  'youtube://results?search_query=white+noise+delta+waves',
+                  'https://www.youtube.com/results?search_query=white+noise+delta+waves'
+                )
+              }
+            >
+              <Ionicons name="logo-youtube" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.deliveryText}>YouTube</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.deliveryBtn, { backgroundColor: '#FF5500' }]}
+              onPress={() =>
+                handleLaunchDeliveryApp(
+                  'SoundCloud',
+                  'soundcloud://search?q=binaural%20beats%20sleep',
+                  'https://soundcloud.com/search?q=binaural%20beats%20sleep'
+                )
+              }
+            >
+              <Ionicons name="cloud-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.deliveryText}>SoundCloud</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* In-Room Crew Stretching Routine */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
