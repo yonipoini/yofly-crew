@@ -430,7 +430,7 @@ export default function MarketplaceScreen() {
   const renderListing = ({ item }: { item: Listing }) => (
     <ListingCard
       listing={item}
-      onPress={() => router.push({ pathname: '/listing/[id]', params: { id: item.id } })}
+      onPress={() => router.push(`/listing/${item.id}`)}
       canManage={Boolean(viewMode === 'MINE' && user?.id && item.hostId === user.id)}
       onEdit={() => router.push({ pathname: '/create-listing', params: { id: item.id } })}
       onDelete={() => handleDeleteListing(item)}
@@ -502,7 +502,7 @@ export default function MarketplaceScreen() {
   const renderBrowseListing = ({ item }: { item: Listing }) => (
     <ListingCard
       listing={item}
-      onPress={() => router.push({ pathname: '/listing/[id]', params: { id: item.id } })}
+      onPress={() => router.push(`/listing/${item.id}`)}
     />
   );
   const browseLocationLabel =
@@ -640,7 +640,7 @@ export default function MarketplaceScreen() {
             listings={filteredListings}
             mapHeight={420}
             onSelectListing={(listing) =>
-              router.push({ pathname: '/listing/[id]', params: { id: listing.id } })
+              router.push(`/listing/${listing.id}`)
             }
           />
         </ScrollView>

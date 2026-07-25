@@ -535,7 +535,7 @@ export default function SettingsScreen() {
       let remoteAvatarUri = draft.avatarUri;
       let localAvatarUri = draft.avatarUri;
 
-      if (user?.id && remoteAvatarUri?.startsWith('file://')) {
+      if (user?.id && remoteAvatarUri && !remoteAvatarUri.startsWith('http') && !remoteAvatarUri.startsWith('avatars/')) {
         remoteAvatarUri = await ProfileMediaService.uploadAvatar(user.id, remoteAvatarUri);
         localAvatarUri = (await ProfileMediaService.resolveAvatarUrl(remoteAvatarUri)) || remoteAvatarUri;
       }

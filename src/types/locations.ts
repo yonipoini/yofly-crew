@@ -69,6 +69,9 @@ export interface CrewLocation {
   crewIntelSummary?: string;
   crewDealLabel?: string;
   isRouteSaved?: boolean;
+  tags?: string[];
+  description?: string;
+  cuisine?: string;
 }
 
 export interface CrewSavedRoute {

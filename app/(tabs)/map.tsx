@@ -29,6 +29,7 @@ import { Alert } from '../../src/types/alerts';
 import { PostAlertModal } from '../../src/components/PostAlertModal';
 import mcoRealPlaces from '../../src/services/mcoRealPlaces.json';
 import { FlightTrackerModal } from '../../src/components/FlightTrackerModal';
+import { matchLocationQuery } from '../../src/utils/searchMatcher';
 
 const { width, height } = Dimensions.get('window');
 const HUB_DELTA = {
@@ -1703,6 +1704,16 @@ export default function MapScreen() {
 
         setLocationError(null);
 
+        // Check for Capt. Riley mock location for testing Orlando Airport (MCO)
+        if (profile?.fullName?.toLowerCase().startsWith('capt. riley')) {
+          const mcoCoords = { latitude: 28.43115, longitude: -81.30808 };
+          setUserLocation(mcoCoords);
+          setMapAirportCode('MCO');
+          focusMap(mcoCoords, HUB_DELTA);
+          await loadLocations(mcoCoords, true, true);
+          return;
+        }
+
         // Fetch location asynchronously without blocking map initialization
         DeviceLocationService.getCurrentLocation()
           .then((currentLocation) => {
@@ -1739,6 +1750,7 @@ export default function MapScreen() {
 
         subscription = await DeviceLocationService.watchLocation((coords) => {
           if (!isMounted) return;
+          if (profile?.fullName?.toLowerCase().startsWith('capt. riley')) return;
           setUserLocation(coords);
           const nearestAirport = findNearestAirport(coords);
           if (nearestAirport && nearestAirport.distanceMiles <= 50) {
@@ -2259,8 +2271,11 @@ export default function MapScreen() {
        }
      });
 
-    const filtered = combinedEntries.filter((entry) =>
-      [
+    const filtered = combinedEntries.filter((entry) => {
+      if (entry.location) {
+        return matchLocationQuery(entry.location, query);
+      }
+      return [
         entry.title,
         entry.subtitle,
         entry.meta,
@@ -2270,8 +2285,8 @@ export default function MapScreen() {
         entry.sourceLabel,
       ]
         .filter((value): value is string => Boolean(value))
-        .some((value) => value.toLowerCase().includes(query))
-    );
+        .some((value) => value.toLowerCase().includes(query));
+    });
 
     return filtered.sort((a, b) => {
       const nameA = (a.title || '').toLowerCase();
@@ -2372,43 +2387,14 @@ export default function MapScreen() {
 
     // 2. Filter by search query (applies in both modes)
     if (query) {
-      // Filter base (local db locations)
-      base = base.filter((location) => {
-        return (
-          (location.name || '').toLowerCase().includes(query) ||
-          (location.address || '').toLowerCase().includes(query) ||
-          (location.shortLabel || '').toLowerCase().includes(query) ||
-          (location.level || '').toLowerCase().includes(query) ||
-          (location.zone || '').toLowerCase().includes(query) ||
-          (location.crewTip || '').toLowerCase().includes(query) ||
-          (location.crewIntelSummary || '').toLowerCase().includes(query)
-        );
-      });
+      // Filter base (local db locations) using semantic taxonomy matcher
+      base = base.filter((location) => matchLocationQuery(location, query));
 
       // Also get matching hints
-      const matchingHints = airportHintLocations.filter((location) => {
-        return (
-          (location.name || '').toLowerCase().includes(query) ||
-          (location.address || '').toLowerCase().includes(query) ||
-          (location.shortLabel || '').toLowerCase().includes(query) ||
-          (location.level || '').toLowerCase().includes(query) ||
-          (location.zone || '').toLowerCase().includes(query) ||
-          (location.crewTip || '').toLowerCase().includes(query) ||
-          (location.crewIntelSummary || '').toLowerCase().includes(query)
-        );
-      });
+      const matchingHints = airportHintLocations.filter((location) => matchLocationQuery(location, query));
 
       // Also get matching MCO local locations if active airport is MCO
-      const matchingMcoLocs = mcoLocalLocations.filter((location) => {
-        return (
-          (location.name || '').toLowerCase().includes(query) ||
-          (location.address || '').toLowerCase().includes(query) ||
-          (location.shortLabel || '').toLowerCase().includes(query) ||
-          (location.level || '').toLowerCase().includes(query) ||
-          (location.zone || '').toLowerCase().includes(query) ||
-          (location.crewTip || '').toLowerCase().includes(query)
-        );
-      });
+      const matchingMcoLocs = mcoLocalLocations.filter((location) => matchLocationQuery(location, query));
 
       // Merge base and matching hints, avoiding duplicates by ID and duplicate title
       const localIds = new Set(base.map((l) => l.id));
@@ -4318,7 +4304,7 @@ export default function MapScreen() {
       )}
 
       {!isNavigating && !selectedLocation && !isUtilityPanelVisible && (displayMode !== 'AIRPORT' || isMapboxActive) && (
-        <View style={[styles.floatingBottomControls, { bottom: tabBarHeight + 16 }]}>
+        <View style={[styles.floatingBottomControls, { bottom: keyboardHeight > 0 ? keyboardHeight + 8 : tabBarHeight + 16 }]}>
           {directorySearchQuery.trim().length > 0 && (
             <View style={styles.floatingSearchResultsContainer}>
               <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled">

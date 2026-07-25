@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -466,6 +466,7 @@ export default function CommunityScreen() {
             : item
         )
       );
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
     }
   };
 
@@ -499,6 +500,7 @@ export default function CommunityScreen() {
             : item
         )
       );
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
     }
   };
 
@@ -539,18 +541,30 @@ export default function CommunityScreen() {
             Browse organized rooms by base, layover need, crew topic, or saved intel.
           </Text>
           <View style={styles.statRow}>
-            <View style={styles.statPill}>
+            <TouchableOpacity
+              style={styles.statPill}
+              onPress={() => handleSelectChannelById('for-you')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.statValue}>{posts.length}</Text>
               <Text style={styles.statLabel}>Posts</Text>
-            </View>
-            <View style={styles.statPill}>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.statPill}
+              onPress={() => router.push('/chat')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.statValue}>{chatRooms.length}</Text>
               <Text style={styles.statLabel}>Rooms</Text>
-            </View>
-            <View style={styles.statPill}>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.statPill}
+              onPress={() => handleSelectChannelById('saved')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.statValue}>{savedPostCount}</Text>
               <Text style={styles.statLabel}>Saved</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -886,6 +900,15 @@ export default function CommunityScreen() {
         )}
       </View>
       </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.fab, { bottom: tabBarHeight + 16 }, !profile.verifiedCrew && styles.fabDisabled]}
+        onPress={() => profile.verifiedCrew && setIsModalVisible(true)}
+        disabled={!profile.verifiedCrew}
+        activeOpacity={0.86}
+      >
+        <Ionicons name="create-outline" size={28} color={theme.colors.background} />
+      </TouchableOpacity>
 
       <CreatePostModal
         visible={isModalVisible}

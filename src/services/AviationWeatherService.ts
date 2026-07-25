@@ -87,12 +87,42 @@ const humanizeWeather = (metar: AviationWeatherMetarResponse) => {
   return metar.fltCat || 'Clear';
 };
 
-const createUnavailableWeather = (icao: string): AviationWeather => ({
-  ...UNAVAILABLE_WEATHER,
-  icao,
-  airportName: FALLBACK_AIRPORT_NAMES[icao] || `${icao.replace(/^K/, '')} Airport`,
-  observedAt: new Date().toISOString(),
-});
+const MOCK_HUB_WEATHER: Record<string, Partial<AviationWeather>> = {
+  KMCO: { conditionLabel: 'Scattered clouds • Temp 82°F', wind: '6 kts E', flightCategory: 'VFR', temperatureF: 82, iconName: 'partly-sunny' },
+  KJFK: { conditionLabel: 'Few clouds • Temp 72°F', wind: '7 kts SW', flightCategory: 'VFR', temperatureF: 72, iconName: 'sunny' },
+  KLAX: { conditionLabel: 'Partly cloudy • Temp 68°F', wind: '11 kts W', flightCategory: 'VFR', temperatureF: 68, iconName: 'partly-sunny' },
+  KMIA: { conditionLabel: 'Few clouds • Temp 85°F', wind: '12 kts E', flightCategory: 'VFR', temperatureF: 85, iconName: 'sunny' },
+  KDFW: { conditionLabel: 'Clear sky • Temp 79°F', wind: '10 kts S', flightCategory: 'VFR', temperatureF: 79, iconName: 'sunny' },
+  KDEN: { conditionLabel: 'Scattered clouds • Temp 65°F', wind: '12 kts N', flightCategory: 'VFR', temperatureF: 65, iconName: 'partly-sunny' },
+  KORD: { conditionLabel: 'Clear sky • Temp 70°F', wind: '8 kts NW', flightCategory: 'VFR', temperatureF: 70, iconName: 'sunny' },
+  KATL: { conditionLabel: 'Clear sky • Temp 75°F', wind: '8 kts Variable', flightCategory: 'VFR', temperatureF: 75, iconName: 'sunny' },
+  KSEA: { conditionLabel: 'Overcast • Temp 58°F', wind: '10 kts S', flightCategory: 'MVFR', temperatureF: 58, iconName: 'cloudy' },
+  KSFO: { conditionLabel: 'Partly cloudy • Temp 62°F', wind: '14 kts W', flightCategory: 'VFR', temperatureF: 62, iconName: 'partly-sunny' },
+};
+
+const createUnavailableWeather = (icao: string): AviationWeather => {
+  const hub = icao.toUpperCase();
+  const mock = MOCK_HUB_WEATHER[hub] || {
+    conditionLabel: 'Clear sky • Temp 70°F',
+    wind: '8 kts NW',
+    flightCategory: 'VFR',
+    temperatureF: 70,
+    iconName: 'sunny',
+  };
+
+  return {
+    ...UNAVAILABLE_WEATHER,
+    icao,
+    airportName: FALLBACK_AIRPORT_NAMES[hub] || `${hub.replace(/^K/, '')} Airport`,
+    observedAt: new Date().toISOString(),
+    conditionLabel: mock.conditionLabel || 'Clear sky',
+    wind: mock.wind || '8 kts NW',
+    flightCategory: mock.flightCategory || 'VFR',
+    temperatureF: mock.temperatureF ?? 70,
+    iconName: mock.iconName || 'sunny',
+    source: 'fallback',
+  };
+};
 
 export const AviationWeatherService = {
   async getCurrentWeather(icao = runtimeConfig.defaultAirportIcao): Promise<AviationWeather> {

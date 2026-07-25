@@ -4,6 +4,7 @@ import { CrewVerificationMethod, CrewVerificationStatus } from '../types/verific
 import { EmergencyContact } from '../types/safety';
 import { supabase } from '../lib/supabase';
 import { UserScopedStorage } from '../services/UserScopedStorage';
+import { ProfileRemoteService } from '../services/ProfileRemoteService';
 import { ScheduleImportService } from '../services/ScheduleImportService';
 import { buildFallbackEmergencyContacts, getPrimaryEmergencyPhone, normalizeEmergencyContacts } from '../utils/beaconSOS';
 import { runtimeConfig } from '../config/runtime';
@@ -199,6 +200,34 @@ export const ProfileProvider: React.FC<React.PropsWithChildren> = ({ children })
               ? normalizeProfile(ScheduleImportService.applyImportedSchedule(defaultProfile, importedSchedule))
               : defaultProfile
           );
+        }
+
+        if (userId && active) {
+          void ProfileRemoteService.fetchProfile(userId)
+            .then((remoteProfile) => {
+              if (remoteProfile && active) {
+                setProfile((current) => {
+                  if (localWriteIsSettling()) {
+                    return current;
+                  }
+                  const merged = normalizeProfile({
+                    ...current,
+                    ...remoteProfile,
+                    preferences: {
+                      ...current.preferences,
+                      ...remoteProfile.preferences,
+                    },
+                  });
+                  UserScopedStorage.setItem(STORAGE_KEY, JSON.stringify(merged), { userId }).catch((err) => {
+                    console.warn('Failed to save background-fetched profile:', err);
+                  });
+                  return merged;
+                });
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to background-fetch remote profile:', err);
+            });
         }
       } catch (error) {
         console.warn('Profile storage unavailable, using session defaults:', error);

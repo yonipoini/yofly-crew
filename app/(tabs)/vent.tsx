@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -71,6 +71,75 @@ export default function VentRoomScreen() {
     }
   };
 
+  const handleToggleUpvote = async (post: Post) => {
+    const currentUpvoteState = Boolean(post.isUpvoted);
+    const optimisticCount = post.upvotes + (currentUpvoteState ? -1 : 1);
+
+    setPosts((prev) =>
+      prev.map((item) =>
+        item.id === post.id
+          ? { ...item, isUpvoted: !currentUpvoteState, upvotes: optimisticCount }
+          : item
+      )
+    );
+
+    try {
+      const result = await CommunityService.toggleUpvote(post.id, currentUpvoteState);
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.id === post.id
+            ? { ...item, isUpvoted: result.isUpvoted, upvotes: result.upvotes }
+            : item
+        )
+      );
+      AppSyncService.emit('community');
+    } catch (error) {
+      console.error('Failed to toggle vent upvote:', error);
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.id === post.id
+            ? { ...item, isUpvoted: currentUpvoteState, upvotes: post.upvotes }
+            : item
+        )
+      );
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
+    }
+  };
+
+  const handleToggleSave = async (post: Post) => {
+    const currentSavedState = Boolean(post.isSaved);
+
+    setPosts((prev) =>
+      prev.map((item) =>
+        item.id === post.id
+          ? { ...item, isSaved: !currentSavedState }
+          : item
+      )
+    );
+
+    try {
+      const result = await CommunityService.toggleSaved(post.id, currentSavedState);
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.id === post.id
+            ? { ...item, isSaved: result.isSaved }
+            : item
+        )
+      );
+      AppSyncService.emit('community');
+    } catch (error) {
+      console.error('Failed to toggle saved vent:', error);
+      setPosts((prev) =>
+        prev.map((item) =>
+          item.id === post.id
+            ? { ...item, isSaved: currentSavedState }
+            : item
+        )
+      );
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -134,6 +203,8 @@ export default function VentRoomScreen() {
                 post={post}
                 isVentMode
                 onPress={() => router.push(`/post/${post.id}?category=${post.category}`)}
+                onToggleUpvote={handleToggleUpvote}
+                onToggleSave={handleToggleSave}
               />
             ))}
           </View>

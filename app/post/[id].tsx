@@ -121,6 +121,7 @@ export default function PostDetailScreen() {
     } catch (error) {
       console.error('Failed to toggle thread upvote:', error);
       setPost(post);
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
     }
   };
 
@@ -149,6 +150,7 @@ export default function PostDetailScreen() {
     } catch (error) {
       console.error('Failed to toggle thread save:', error);
       setPost(post);
+      Alert.alert('Action Blocked', error instanceof Error ? error.message : 'Unable to complete action.');
     }
   };
 
