@@ -15,7 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.yoflycrew.app",
       "supportsTablet": true,
-      "buildNumber": "222",
+      "buildNumber": "223",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
