@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { AppTheme, useTheme } from '../src/theme/theme';
 
@@ -33,10 +34,66 @@ export default function TranslatorScreen() {
   const router = useRouter();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
 
+  interface TranslationHistoryItem {
+    id: string;
+    original: string;
+    translated: string;
+    targetLang: string;
+  }
+
   const [inputText, setInputText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [targetLang, setTargetLang] = useState('es');
   const [isTranslating, setIsTranslating] = useState(false);
+  const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
+
+  // Load history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('yofly.translator.history');
+        if (stored) {
+          setHistory(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.warn('Failed to load translation history:', err);
+      }
+    };
+    void loadHistory();
+  }, []);
+
+  // Save item helper
+  const saveToHistory = async (original: string, translated: string, langCode: string) => {
+    if (!original.trim() || !translated.trim()) return;
+
+    setHistory((prevHistory) => {
+      const filtered = prevHistory.filter(
+        (item) => item.original.toLowerCase() !== original.trim().toLowerCase()
+      );
+      const newItem: TranslationHistoryItem = {
+        id: Date.now().toString(),
+        original: original.trim(),
+        translated: translated.trim(),
+        targetLang: langCode,
+      };
+      const updated = [newItem, ...filtered].slice(0, 5); // Save last 5 translations
+      
+      // Async save
+      void AsyncStorage.setItem('yofly.translator.history', JSON.stringify(updated))
+        .catch(err => console.warn('Failed to persist translation history:', err));
+
+      return updated;
+    });
+  };
+
+  const clearHistory = async () => {
+    setHistory([]);
+    try {
+      await AsyncStorage.removeItem('yofly.translator.history');
+    } catch (err) {
+      console.warn('Failed to clear translation history:', err);
+    }
+  };
 
   const handleTranslate = async (text: string, langCode: string) => {
     if (!text.trim()) {
@@ -50,6 +107,7 @@ export default function TranslatorScreen() {
       const result = await response.json();
       const translated = result[0].map((item: any) => item[0]).join('');
       setTranslatedText(translated);
+      void saveToHistory(text, translated, langCode);
     } catch (err) {
       console.warn('Real-time translation failed:', err);
     } finally {
@@ -188,6 +246,69 @@ export default function TranslatorScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* Saved & Recent Translations card */}
+        {history.length > 0 ? (
+          <View style={[styles.card, { marginTop: theme.spacing.md }]}>
+            <View style={styles.historyHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                <Ionicons name="time-outline" size={20} color={theme.colors.accent} />
+                <Text style={styles.cardTitle}>Recent Translations</Text>
+              </View>
+              <TouchableOpacity onPress={clearHistory} style={styles.clearHistoryBtn}>
+                <Ionicons name="trash-outline" size={14} color={theme.colors.error} />
+                <Text style={styles.clearHistoryText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.historyList}>
+              {history.map((item) => {
+                const targetFlag = LANGUAGES.find((l) => l.code === item.targetLang)?.flag || '🌐';
+                return (
+                  <View key={item.id} style={styles.historyItem}>
+                    <TouchableOpacity
+                      style={styles.historyContent}
+                      onPress={() => {
+                        setInputText(item.original);
+                        setTranslatedText(item.translated);
+                        setTargetLang(item.targetLang);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.historyOriginal} numberOfLines={1}>
+                        {item.original}
+                      </Text>
+                      <Text style={styles.historyTranslated} numberOfLines={2}>
+                        {targetFlag} {item.translated}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.historyActions}>
+                      <TouchableOpacity
+                        style={styles.historyActionBtn}
+                        onPress={() => {
+                          Speech.stop();
+                          Speech.speak(item.translated, { language: item.targetLang, rate: 0.9 });
+                        }}
+                      >
+                        <Ionicons name="volume-high-outline" size={16} color={theme.colors.accent} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.historyActionBtn}
+                        onPress={() => {
+                          Clipboard.setString(item.translated);
+                          Alert.alert('Copied!', 'Translation copied to clipboard.');
+                        }}
+                      >
+                        <Ionicons name="copy-outline" size={16} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -365,5 +486,62 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
       fontSize: 14,
       fontWeight: '600',
       lineHeight: 18,
+    },
+    historyHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    clearHistoryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    clearHistoryText: {
+      color: theme.colors.error,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    historyList: {
+      gap: theme.spacing.sm,
+    },
+    historyItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.roundness.md,
+      padding: theme.spacing.md,
+    },
+    historyContent: {
+      flex: 1,
+      paddingRight: theme.spacing.sm,
+    },
+    historyOriginal: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    historyTranslated: {
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    historyActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    historyActionBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: theme.colors.border + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   });
