@@ -9,6 +9,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useProfile } from '../../src/context/ProfileContext';
 import { AppSyncService } from '../../src/services/AppSyncService';
 import { CommunityService } from '../../src/services/CommunityService';
+import { ChatMediaService } from '../../src/services/ChatMediaService';
 import { CrewLockBanner } from '../../src/components/CrewLockBanner';
 import { CreatePostModal } from '../../src/components/CreatePostModal';
 import { PostCard } from '../../src/components/PostCard';
@@ -56,20 +57,31 @@ export default function VentRoomScreen() {
     title: string,
     content: string,
     _category: PostCategory,
-    _isAnonymous: boolean,
+    isAnonymous: boolean,
     airportCode?: string,
-    topicTags?: string[]
+    topicTags?: string[],
+    photoUri?: string | null
   ) => {
     try {
+      let finalPhotoPath = undefined;
+      if (photoUri && user?.id) {
+        try {
+          finalPhotoPath = await ChatMediaService.uploadAttachment(user.id, photoUri);
+        } catch (uploadErr) {
+          console.warn('Failed to upload attachment:', uploadErr);
+        }
+      }
+
       const newPost = await CommunityService.createPost({
         title,
         content,
         category: PostCategory.VENT,
-        isAnonymous: true,
+        isAnonymous: isAnonymous,
         airportCode,
         topicTags,
         postScope: airportCode ? 'LOCAL' : 'GLOBAL',
-      });
+        imageUrl: finalPhotoPath,
+      } as any);
       setPosts((prev) => [newPost, ...prev]);
       setIsModalVisible(false);
       AppSyncService.emit('community');

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView, Switch, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { AppTheme, useTheme } from '../theme/theme';
 import { PostCategory } from '../types/community';
 
@@ -22,7 +23,8 @@ interface CreatePostModalProps {
     category: PostCategory,
     isAnonymous: boolean,
     airportCode?: string,
-    topicTags?: string[]
+    topicTags?: string[],
+    photoUri?: string | null
   ) => void;
 }
 
@@ -53,6 +55,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [airportTag, setAirportTag] = useState('');
   const [topicTags, setTopicTags] = useState<string[]>([]);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const isVentPost = category === PostCategory.VENT;
   const visibleCategories = allowedCategories?.length
     ? CATEGORIES.filter((cat) => allowedCategories.includes(cat.type))
@@ -70,12 +73,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setIsAnonymous(normalizedInitialCategory === PostCategory.VENT);
     setAirportTag(initialAirportTag);
     setTopicTags(initialTopicTags);
+    setPhotoUri(null);
   }, [initialAirportTag, initialTopicTags, normalizedInitialCategory, visible]);
 
   const toggleTopicTag = (tag: string) => {
     setTopicTags((current) =>
       current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]
     );
+  };
+
+  const handlePickPhoto = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'YoFly Crew needs photo library permissions to add photos to posts.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
   };
 
   const handleSubmit = () => {
@@ -89,11 +111,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         ? `${content.trim()}\n\n${structuredTags.join(' ')}`
         : content.trim();
 
-      onPost(title, nextContent, category, isAnonymous, normalizedAirport || undefined, topicTags);
+      onPost(title, nextContent, category, isAnonymous, normalizedAirport || undefined, topicTags, photoUri);
       setTitle('');
       setContent('');
       setAirportTag('');
       setTopicTags([]);
+      setPhotoUri(null);
       onClose();
     }
   };
@@ -185,30 +208,34 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               onChangeText={setContent}
             />
 
-            <Text style={styles.label}>Organize this post</Text>
-            <TextInput
-              style={styles.airportInput}
-              placeholder="Airport or base tag, like JFK, LAX, DFW"
-              placeholderTextColor={theme.colors.textMuted}
-              value={airportTag}
-              onChangeText={setAirportTag}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <View style={styles.topicGrid}>
-              {['Crash Pads', 'Reserve', 'Commuting', 'Hotels', 'Parking', 'Training', 'Deals', 'Safety'].map((tag) => {
-                const active = topicTags.includes(tag);
-                return (
-                  <TouchableOpacity
-                    key={tag}
-                    style={[styles.topicChip, active && styles.topicChipActive]}
-                    onPress={() => toggleTopicTag(tag)}
-                  >
-                    <Text style={[styles.topicChipText, active && styles.topicChipTextActive]}>{tag}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {!isVentPost && (
+              <>
+                <Text style={styles.label}>Organize this post</Text>
+                <TextInput
+                  style={styles.airportInput}
+                  placeholder="Airport or base tag, like JFK, LAX, DFW"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={airportTag}
+                  onChangeText={setAirportTag}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <View style={styles.topicGrid}>
+                  {['Crash Pads', 'Reserve', 'Commuting', 'Hotels', 'Parking', 'Training', 'Deals', 'Safety'].map((tag) => {
+                    const active = topicTags.includes(tag);
+                    return (
+                      <TouchableOpacity
+                        key={tag}
+                        style={[styles.topicChip, active && styles.topicChipActive]}
+                        onPress={() => toggleTopicTag(tag)}
+                      >
+                        <Text style={[styles.topicChipText, active && styles.topicChipTextActive]}>{tag}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
@@ -225,10 +252,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               />
             </View>
 
-            <TouchableOpacity style={styles.mediaBtn}>
-              <Ionicons name="image-outline" size={24} color={theme.colors.accent} />
-              <Text style={styles.mediaBtnText}>Add Photo</Text>
-            </TouchableOpacity>
+            <View style={{ marginBottom: theme.spacing.md }}>
+              {photoUri ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: photoUri }} style={styles.imagePreview} />
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => setPhotoUri(null)}>
+                    <Ionicons name="close-circle" size={24} color={theme.colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.mediaBtn} onPress={handlePickPhoto}>
+                  <Ionicons name="image-outline" size={24} color={theme.colors.accent} />
+                  <Text style={styles.mediaBtnText}>Add Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -436,5 +474,25 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   mediaBtnText: {
     color: theme.colors.accent,
     fontWeight: 'bold',
-  }
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    width: 90,
+    height: 90,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 12,
+  },
 });

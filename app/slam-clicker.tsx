@@ -26,6 +26,41 @@ interface HotelCredentials {
   wifiPassword: string;
 }
 
+const SLEEP_MUSIC_TRACKS = [
+  {
+    id: 'lofi',
+    title: 'Lofi Sleep Beats',
+    subtitle: 'Lofi Girl • 24/7 Live Stream',
+    desc: 'Soft beats for winding down and quiet relaxation.',
+    icon: 'musical-notes-outline',
+    url: 'https://www.youtube.com/watch?v=UJs6__K7gSY',
+  },
+  {
+    id: 'rain',
+    title: 'Deep Rain Ambient Sounds',
+    subtitle: 'Rainstorm • 10 Hours',
+    desc: 'Excellent for masking hallway and HVAC hotel noise.',
+    icon: 'rainy-outline',
+    url: 'https://www.youtube.com/watch?v=mPZkdNFkNps',
+  },
+  {
+    id: 'ocean',
+    title: 'Ocean Waves White Noise',
+    subtitle: 'Nature Sounds • 8 Hours',
+    desc: 'Calming shore waves for combatting layover insomnia.',
+    icon: 'water-outline',
+    url: 'https://www.youtube.com/watch?v=bn9F19Hi1Lk',
+  },
+  {
+    id: 'binaural',
+    title: 'Binaural Delta Sleep Waves',
+    subtitle: 'Binaural Beats • 8 Hours',
+    desc: 'Frequency tones mapped to trigger deep REM cycles.',
+    icon: 'moon-outline',
+    url: 'https://www.youtube.com/watch?v=xsfyb1pStdw',
+  },
+];
+
 export default function SlamClickerScreen() {
   const { theme, isDark } = useTheme();
   const { profile } = useProfile();
@@ -201,6 +236,7 @@ export default function SlamClickerScreen() {
       desc: 'Stand with feet shoulder-width apart. Inhale deeply, then exhale as you slowly roll down spine bone-by-bone. Let your head, neck, and arms hang heavy. Soften your knees.',
       tip: 'Perfect for counteracting gravity forces and long hours sitting in flight decks or standing in galleys.',
       icon: 'body-outline',
+      videoUrl: 'https://www.youtube.com/shorts/uI190y3W0xc',
     },
     {
       id: 2,
@@ -209,6 +245,7 @@ export default function SlamClickerScreen() {
       desc: 'Sit upright on the edge of the bed. Extend one leg straight forward with foot flexed. Gently hinge forward from your hips, keeping your chest open. Hold for 90 seconds, then swap legs.',
       tip: 'Relieves sciatic pressure caused by long-duration crew seating.',
       icon: 'bed-outline',
+      videoUrl: 'https://www.youtube.com/shorts/y6nNk8cXM3c',
     },
     {
       id: 3,
@@ -217,6 +254,7 @@ export default function SlamClickerScreen() {
       desc: 'Lie on your back next to a hotel wall. Hinge your hips as close to the wall as comfortable and extend your legs straight up vertically. Place arms at your sides, close your eyes, and breathe slowly.',
       tip: 'Drains pooled blood and fluid from feet/legs, reduces swelling, and triggers parasympathetic rest responses.',
       icon: 'analytics-outline',
+      videoUrl: 'https://www.youtube.com/shorts/8ggkgq220bA',
     },
     {
       id: 4,
@@ -225,6 +263,7 @@ export default function SlamClickerScreen() {
       desc: 'Stand in the hotel room doorway. Place your forearms flat against the doorframe at a 90-degree angle. Gently step one foot forward until you feel a comfortable stretch across your collarbone and shoulders.',
       tip: 'Corrects forward-slumped shoulders from steering or pushing galley carts.',
       icon: 'door-outline',
+      videoUrl: 'https://www.youtube.com/shorts/O8rJw_TmC1Y',
     },
   ];
 
@@ -464,57 +503,35 @@ export default function SlamClickerScreen() {
           </View>
         </View>
 
-        {/* Crew Sound & Sleep Music */}
+        {/* Relaxing Sleep & Layover Music */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="musical-notes-outline" size={20} color={theme.colors.accent} />
-            <Text style={styles.cardTitle}>Sleep Music & White Noise</Text>
+            <Ionicons name="moon-outline" size={20} color={theme.colors.accent} />
+            <Text style={styles.cardTitle}>Relaxing Sleep & Layover Music</Text>
           </View>
           <Text style={styles.cardInfo}>
-            Launch sleep music, delta waves, or binaural beats to block out slamming hotel doors.
+            Soothing sounds and ambient mixes to mask hotel noise and help you fall asleep faster.
           </Text>
-          <View style={styles.deliveryGrid}>
-            <TouchableOpacity
-              style={[styles.deliveryBtn, { backgroundColor: '#1DB954' }]}
-              onPress={() =>
-                handleLaunchDeliveryApp(
-                  'Spotify',
-                  'spotify://search/delta%20waves%20sleep',
-                  'https://open.spotify.com/search/delta%20waves%20sleep'
-                )
-              }
-            >
-              <Ionicons name="logo-spotify" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.deliveryText}>Spotify</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.deliveryBtn, { backgroundColor: '#FF0000' }]}
-              onPress={() =>
-                handleLaunchDeliveryApp(
-                  'YouTube',
-                  'youtube://results?search_query=white+noise+delta+waves',
-                  'https://www.youtube.com/results?search_query=white+noise+delta+waves'
-                )
-              }
-            >
-              <Ionicons name="logo-youtube" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.deliveryText}>YouTube</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.deliveryBtn, { backgroundColor: '#FF5500' }]}
-              onPress={() =>
-                handleLaunchDeliveryApp(
-                  'SoundCloud',
-                  'soundcloud://search?q=binaural%20beats%20sleep',
-                  'https://soundcloud.com/search?q=binaural%20beats%20sleep'
-                )
-              }
-            >
-              <Ionicons name="cloud-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.deliveryText}>SoundCloud</Text>
-            </TouchableOpacity>
+          <View style={styles.musicList}>
+            {SLEEP_MUSIC_TRACKS.map((track) => (
+              <TouchableOpacity
+                key={track.id}
+                style={styles.musicItem}
+                onPress={() => Linking.openURL(track.url)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.musicIconWrap}>
+                  <Ionicons name={track.icon as any} size={20} color={theme.colors.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.musicTitle}>{track.title}</Text>
+                  <Text style={styles.musicSubtitle}>{track.subtitle}</Text>
+                  <Text style={styles.musicDesc}>{track.desc}</Text>
+                </View>
+                <Ionicons name="open-outline" size={16} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -563,6 +580,16 @@ export default function SlamClickerScreen() {
                         <Ionicons name="bulb-outline" size={14} color={theme.colors.accent} style={{ marginRight: 6 }} />
                         <Text style={styles.stretchTipText}>{stretch.tip}</Text>
                       </View>
+                      {stretch.videoUrl && (
+                        <TouchableOpacity
+                          style={styles.watchVideoBtn}
+                          onPress={() => Linking.openURL(stretch.videoUrl)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="play-circle-outline" size={16} color={theme.colors.accent} style={{ marginRight: 6 }} />
+                          <Text style={styles.watchVideoText}>Watch Video Tutorial</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   ) : null}
                 </TouchableOpacity>
@@ -912,5 +939,59 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
       fontSize: 11,
       fontWeight: '700',
       lineHeight: 14,
+    },
+    watchVideoBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: theme.spacing.sm,
+      backgroundColor: theme.colors.accent + '15',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    watchVideoText: {
+      color: theme.colors.accent,
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    musicList: {
+      gap: 12,
+      marginTop: theme.spacing.sm,
+    },
+    musicItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      borderRadius: theme.roundness.md,
+      gap: theme.spacing.md,
+    },
+    musicIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.colors.accent + '15',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    musicTitle: {
+      color: theme.colors.text,
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    musicSubtitle: {
+      color: theme.colors.accent,
+      fontSize: 11,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    musicDesc: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      marginTop: 4,
+      lineHeight: 16,
     },
   });

@@ -15,6 +15,7 @@ import { ChatRoom } from '../../src/types/chat';
 import { Post, PostCategory } from '../../src/types/community';
 import { CommunityService } from '../../src/services/CommunityService';
 import { ChatService } from '../../src/services/ChatService';
+import { ChatMediaService } from '../../src/services/ChatMediaService';
 import { NotificationInboxService } from '../../src/services/NotificationInboxService';
 import { ModerationService } from '../../src/services/ModerationService';
 
@@ -418,9 +419,19 @@ export default function CommunityScreen() {
     category: PostCategory,
     isAnonymous: boolean,
     airportCode?: string,
-    topicTags?: string[]
+    topicTags?: string[],
+    photoUri?: string | null
   ) => {
     try {
+      let finalPhotoPath = undefined;
+      if (photoUri && user?.id) {
+        try {
+          finalPhotoPath = await ChatMediaService.uploadAttachment(user.id, photoUri);
+        } catch (uploadErr) {
+          console.warn('Failed to upload attachment:', uploadErr);
+        }
+      }
+
       const newPost = await CommunityService.createPost({
         title,
         content,
@@ -429,7 +440,8 @@ export default function CommunityScreen() {
         airportCode,
         topicTags,
         postScope: airportCode ? 'LOCAL' : 'GLOBAL',
-      });
+        imageUrl: finalPhotoPath,
+      } as any);
       setPosts((prev) => [newPost, ...prev]);
       setSelectedCategory(category);
       setIsModalVisible(false);
