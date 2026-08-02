@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert, AlertButton } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppTheme, useTheme } from '../theme/theme';
 import { Post, PostCategory } from '../types/community';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '../lib/supabase';
+import { ModerationService } from '../services/ModerationService';
 
 interface PostCardProps {
   post: Post;
@@ -11,6 +13,7 @@ interface PostCardProps {
   isVentMode?: boolean;
   onToggleUpvote?: (post: Post) => void;
   onToggleSave?: (post: Post) => void;
+  onBlockSuccess?: () => void;
 }
 
 const getCategoryColor = (theme: AppTheme, category: PostCategory) => {
@@ -31,6 +34,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   isVentMode,
   onToggleUpvote,
   onToggleSave,
+  onBlockSuccess,
 }) => {
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -57,6 +61,81 @@ export const PostCard: React.FC<PostCardProps> = ({
     });
   };
 
+  const handlePostOptions = () => {
+    supabase.auth.getUser().then((result: any) => {
+      const user = result.data?.user;
+      if (!user) {
+        Alert.alert('Authentication Required', 'Please sign in to manage safety features.');
+        return;
+      }
+      
+      const isOwnPost = post.authorId === user.id;
+      const displayAuthorName = post.isAnonymous ? 'Anonymous Crew' : post.authorName;
+      const options: AlertButton[] = [];
+
+      if (!isOwnPost) {
+        options.push(
+          {
+            text: 'Report Post',
+            onPress: () => {
+              Alert.alert(
+                'Report Content',
+                'Why are you reporting this content?',
+                [
+                  { text: 'Harassment / Hate Speech', onPress: () => submitReport('Harassment / Hate Speech') },
+                  { text: 'Spam / Advertising', onPress: () => submitReport('Spam / Advertising') },
+                  { text: 'Explicit Content', onPress: () => submitReport('Explicit Content') },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }
+          },
+          {
+            text: `Block ${displayAuthorName}`,
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                'Block User',
+                `Are you sure you want to block this user? You will no longer see their posts, comments, or messages.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Block',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await ModerationService.blockUser(post.authorId);
+                        Alert.alert('Blocked', 'User has been blocked.');
+                        onBlockSuccess?.();
+                      } catch (err) {
+                        Alert.alert('Error', 'Failed to block user.');
+                      }
+                    }
+                  }
+                ]
+              );
+            }
+          }
+        );
+      } else {
+        Alert.alert('Post Options', 'This is your own post.', [{ text: 'OK' }]);
+        return;
+      }
+
+      options.push({ text: 'Cancel', style: 'cancel' });
+      Alert.alert('Safety & Moderation', 'Report or block this content:', options);
+    });
+  };
+
+  const submitReport = async (reason: string) => {
+    try {
+      await ModerationService.reportContent('POST', post.id, reason);
+      Alert.alert('Report Submitted', 'Thank you. We will review this post within 24 hours.');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+  };
+
   return (
     <TouchableOpacity 
       style={[styles.card, isVentMode && styles.cardVent]} 
@@ -64,27 +143,32 @@ export const PostCard: React.FC<PostCardProps> = ({
       activeOpacity={0.9}
     >
       <View style={[styles.header, isVentMode && { display: 'none' }]}>
-          <View style={styles.authorInfo}>
-            <View style={styles.avatar}>
+        <View style={styles.authorInfo}>
+          <View style={styles.avatar}>
             {post.authorAvatar ? (
               <Image source={{ uri: post.authorAvatar }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person" size={16} color={theme.colors.textMuted} />
             )}
-            </View>
-            <View>
-              <Text style={styles.authorName}>
-                {post.isAnonymous ? 'Anonymous Crew' : post.authorName}
+          </View>
+          <View>
+            <Text style={styles.authorName}>
+              {post.isAnonymous ? 'Anonymous Crew' : post.authorName}
             </Text>
             <Text style={styles.metaText}>
               {post.authorRole} • {formatDistanceToNow(new Date(post.createdAt))} ago
             </Text>
           </View>
         </View>
-            <View style={[styles.categoryBadge, { borderColor: getCategoryColor(theme, post.category) }]}>
-          <Text style={[styles.categoryText, { color: getCategoryColor(theme, post.category) }]}>
-            {post.category}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={[styles.categoryBadge, { borderColor: getCategoryColor(theme, post.category) }]}>
+            <Text style={[styles.categoryText, { color: getCategoryColor(theme, post.category) }]}>
+              {post.category}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={handlePostOptions} style={{ padding: 6 }}>
+            <Ionicons name="ellipsis-horizontal" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -133,13 +217,20 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </View>
 
-        <TouchableOpacity style={styles.shareBtn} onPress={() => onToggleSave?.(post)}>
-          <Ionicons
-            name={post.isSaved ? 'bookmark' : 'bookmark-outline'}
-            size={18}
-            color={post.isSaved ? theme.colors.accent : theme.colors.textMuted}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {isVentMode && (
+            <TouchableOpacity onPress={handlePostOptions} style={{ padding: 6 }}>
+              <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.shareBtn} onPress={() => onToggleSave?.(post)}>
+            <Ionicons
+              name={post.isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={18}
+              color={post.isSaved ? theme.colors.accent : theme.colors.textMuted}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );

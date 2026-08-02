@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AlertButton,
   KeyboardAvoidingView,
   Platform,
   Share,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModerationService } from '../../src/services/ModerationService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,6 +69,13 @@ export default function PostDetailScreen() {
         return;
       }
 
+      if (detail && ModerationService.isUserBlockedSync(detail.authorId)) {
+        Alert.alert('Blocked User', 'This post is from a user you blocked.', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+        return;
+      }
+
       setPost(detail);
       setEditTitle(detail?.title || '');
       setEditContent(detail?.content || '');
@@ -76,7 +85,11 @@ export default function PostDetailScreen() {
         if (!active) {
           return;
         }
-        setComments(threadComments);
+        setComments(
+          threadComments.filter(
+            (comment) => !ModerationService.isUserBlockedSync(comment.authorId)
+          )
+        );
       } else {
         setComments([]);
       }
@@ -266,6 +279,66 @@ export default function PostDetailScreen() {
     );
   };
 
+  const handleCommentOptions = (comment: PostComment) => {
+    Alert.alert(
+      'Safety Options',
+      `What would you like to do regarding ${comment.authorName}'s comment?`,
+      [
+        {
+          text: 'Report Comment',
+          onPress: () => {
+            Alert.alert(
+              'Report Reason',
+              'Why are you reporting this comment?',
+              [
+                { text: 'Harassment / Hate Speech', onPress: () => submitCommentReport(comment, 'Harassment / Hate Speech') },
+                { text: 'Spam / Advertising', onPress: () => submitCommentReport(comment, 'Spam / Advertising') },
+                { text: 'Explicit Content', onPress: () => submitCommentReport(comment, 'Explicit Content') },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }
+        },
+        {
+          text: `Block ${comment.authorName}`,
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Block User',
+              `Are you sure you want to block ${comment.authorName}? You will no longer see their posts, comments, or messages.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await ModerationService.blockUser(comment.authorId);
+                      Alert.alert('Blocked', `${comment.authorName} has been blocked.`);
+                      setComments(prev => prev.filter(c => c.authorId !== comment.authorId));
+                    } catch (err) {
+                      Alert.alert('Error', 'Failed to block user.');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const submitCommentReport = async (comment: PostComment, reason: string) => {
+    try {
+      await ModerationService.reportContent('COMMENT', comment.id, reason);
+      Alert.alert('Report Submitted', 'Thank you. We will review this comment within 24 hours.');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+  };
+
   const handleSharePost = async () => {
     if (!post) {
       return;
@@ -437,7 +510,11 @@ export default function PostDetailScreen() {
                           <Ionicons name="trash-outline" size={14} color={theme.colors.error} />
                           <Text style={styles.commentActionText}>Delete</Text>
                         </TouchableOpacity>
-                      ) : null}
+                      ) : (
+                        <TouchableOpacity onPress={() => handleCommentOptions(comment)} style={styles.commentAction}>
+                          <Ionicons name="ellipsis-horizontal" size={16} color={theme.colors.textMuted} />
+                        </TouchableOpacity>
+                      )}
                     </View>
                     <Text style={styles.commentText}>{comment.content}</Text>
                   </View>

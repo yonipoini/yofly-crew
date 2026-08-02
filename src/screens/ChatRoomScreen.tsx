@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, AlertButton, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,6 +10,7 @@ import { ChatService } from '../services/ChatService';
 import { useAuth } from '../context/AuthContext';
 import { NotificationInboxService } from '../services/NotificationInboxService';
 import { ChatReactionService } from '../services/ChatReactionService';
+import { ModerationService } from '../services/ModerationService';
 
 interface ChatRoomScreenProps {
   room: ChatRoom;
@@ -32,14 +33,15 @@ export const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, onClose })
 
     const loadMessages = async () => {
       const data = await ChatService.getMessages(room.id);
+      const filteredData = data.filter(msg => !ModerationService.isUserBlockedSync(msg.senderId));
       const nextMessages = user?.id
         ? await Promise.all(
-            data.map(async (message) => ({
+            filteredData.map(async (message) => ({
               ...message,
               reactions: await ChatReactionService.getReactions(message.id, user.id),
             }))
           )
-        : data;
+        : filteredData;
 
       if (active) {
         setMessages(nextMessages);
@@ -53,6 +55,10 @@ export const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, onClose })
 
     const subscription = ChatService.subscribeToRoom(room.id, async (message) => {
       if (!active) {
+        return;
+      }
+
+      if (ModerationService.isUserBlockedSync(message.senderId)) {
         return;
       }
 
@@ -94,6 +100,72 @@ export const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, onClose })
 
     if (!result.canceled && result.assets[0]?.uri) {
       setAttachmentUri(result.assets[0].uri);
+    }
+  };
+
+  const handleMessageLongPress = (message: Message) => {
+    if (message.isMe) {
+      // No moderation actions on own messages
+      return;
+    }
+
+    Alert.alert(
+      'Safety Options',
+      `Manage options for ${message.senderName}'s message:`,
+      [
+        {
+          text: 'Report Message',
+          onPress: () => {
+            Alert.alert(
+              'Report Content',
+              'Why are you reporting this message?',
+              [
+                { text: 'Harassment / Hate Speech', onPress: () => submitMessageReport(message, 'Harassment / Hate Speech') },
+                { text: 'Spam / Advertising', onPress: () => submitMessageReport(message, 'Spam / Advertising') },
+                { text: 'Explicit Content', onPress: () => submitMessageReport(message, 'Explicit Content') },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }
+        },
+        {
+          text: `Block ${message.senderName}`,
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Block User',
+              `Are you sure you want to block ${message.senderName}? You will no longer see their messages, comments, or posts.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await ModerationService.blockUser(message.senderId);
+                      Alert.alert('Blocked', `${message.senderName} has been blocked.`);
+                      // Remove all messages from this blocked user locally
+                      setMessages(current => current.filter(m => m.senderId !== message.senderId));
+                    } catch (err) {
+                      Alert.alert('Error', 'Failed to block user.');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const submitMessageReport = async (message: Message, reason: string) => {
+    try {
+      await ModerationService.reportContent('MESSAGE', message.id, reason);
+      Alert.alert('Report Submitted', 'Thank you. We will review this message within 24 hours.');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to submit report.');
     }
   };
 
@@ -180,7 +252,13 @@ export const ChatRoomScreen: React.FC<ChatRoomScreenProps> = ({ room, onClose })
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <MessageBubble message={item} onReact={handleReact} />}
+        renderItem={({ item }) => (
+          <MessageBubble 
+            message={item} 
+            onReact={handleReact} 
+            onLongPress={handleMessageLongPress} 
+          />
+        )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={chatError ? <Text style={styles.chatError}>{chatError}</Text> : null}

@@ -6,9 +6,10 @@ import { Message } from '../types/chat';
 interface MessageBubbleProps {
   message: Message;
   onReact?: (message: Message, emoji: string) => void;
+  onLongPress?: (message: Message) => void;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onReact }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onReact, onLongPress }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -19,7 +20,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onReact }
           {message.senderName} • {message.senderRole}
         </Text>
       )}
-      <View style={[styles.bubble, message.isMe ? styles.bubbleMine : styles.bubbleTheirs]}>
+      <TouchableOpacity 
+        style={[styles.bubble, message.isMe ? styles.bubbleMine : styles.bubbleTheirs]}
+        onLongPress={() => onLongPress?.(message)}
+        delayLongPress={400}
+        activeOpacity={0.8}
+      >
         {message.attachmentUrl ? (
           <Image source={{ uri: message.attachmentUrl }} style={styles.attachmentImage} />
         ) : null}
@@ -28,7 +34,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onReact }
             {message.content}
           </Text>
         ) : null}
-      </View>
+      </TouchableOpacity>
       <View style={[styles.reactionRow, message.isMe ? styles.reactionRowMine : styles.reactionRowTheirs]}>
         {['👍', '🔥', '🛫'].map((emoji) => {
           const reaction = message.reactions?.find((item) => item.emoji === emoji);

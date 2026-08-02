@@ -16,6 +16,7 @@ import { Post, PostCategory } from '../../src/types/community';
 import { CommunityService } from '../../src/services/CommunityService';
 import { ChatService } from '../../src/services/ChatService';
 import { NotificationInboxService } from '../../src/services/NotificationInboxService';
+import { ModerationService } from '../../src/services/ModerationService';
 
 type CommunityViewMode = 'FOR_YOU' | 'LOCAL' | 'CATEGORIES' | 'SAVED';
 
@@ -240,6 +241,9 @@ export default function CommunityScreen() {
   );
   const composerInitialAirportTag = selectedChannel.mode === 'LOCAL' ? profile.baseAirport : '';
   const filteredPosts = posts.filter((post) => {
+    if (ModerationService.isUserBlockedSync(post.authorId)) {
+      return false;
+    }
     const query = searchQuery.trim().toLowerCase();
     const searchableText = [
       post.title,
@@ -873,6 +877,7 @@ export default function CommunityScreen() {
               onPress={() => router.push(`/post/${item.id}?category=${item.category}`)}
               onToggleUpvote={handleToggleUpvote}
               onToggleSave={handleToggleSave}
+              onBlockSuccess={loadPosts}
             />
           ))
         ) : (

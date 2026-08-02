@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,8 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [agreedToEula, setAgreedToEula] = useState(false);
+  const [showEulaModal, setShowEulaModal] = useState(false);
 
   useEffect(() => {
     if (params.mode === 'signup' || params.mode === 'signin') {
@@ -62,6 +65,10 @@ export default function AuthScreen() {
 
     try {
       if (mode === 'signup') {
+        if (!agreedToEula) {
+          setAuthError('You must read and agree to the EULA to create an account.');
+          return;
+        }
         await signUpWithWorkEmail({ email, password });
         Alert.alert(
           'Check Your Work Email',
@@ -252,6 +259,33 @@ export default function AuthScreen() {
                   </View>
                 ) : null}
 
+                {mode === 'signup' && (
+                  <View style={styles.eulaContainer}>
+                    <TouchableOpacity
+                      style={styles.eulaCheckboxRow}
+                      onPress={() => setAgreedToEula(!agreedToEula)}
+                    >
+                      <Ionicons
+                        name={agreedToEula ? 'checkbox-outline' : 'square-outline'}
+                        size={20}
+                        color={agreedToEula ? theme.colors.accent : theme.colors.textMuted}
+                      />
+                      <Text style={styles.eulaText}>
+                        I agree to the{' '}
+                        <Text
+                          style={styles.eulaLink}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setShowEulaModal(true);
+                          }}
+                        >
+                          End-User License Agreement (EULA)
+                        </Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <View style={styles.noteCard}>
                   <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.accent} />
                   <Text style={styles.noteText}>
@@ -307,6 +341,59 @@ export default function AuthScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showEulaModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowEulaModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>End-User License Agreement</Text>
+              <TouchableOpacity onPress={() => setShowEulaModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={true}>
+              <Text style={styles.eulaParagraph}>
+                This End-User License Agreement ("EULA") is a legal agreement between you and YoFlyCrew LLC.
+              </Text>
+              <Text style={styles.eulaSectionHeader}>1. Objectionable Content Policy</Text>
+              <Text style={styles.eulaParagraph}>
+                YoFly Crew enforces a strict zero-tolerance policy regarding objectionable content and abusive behavior. By using the app, you agree not to post, publish, or transmit any content that:
+                {"\n"}- Is harassing, abusive, threatening, or defamatory to other users.
+                {"\n"}- Promotes hate speech, discrimination, or violence of any kind.
+                {"\n"}- Contains explicit, pornographic, or sexually suggestive material.
+                {"\n"}- Infringes on privacy, copyright, or intellectual property rights.
+                {"\n"}- Promotes commercial spam or illegal activities.
+              </Text>
+              <Text style={styles.eulaSectionHeader}>2. Moderation and Enforcement</Text>
+              <Text style={styles.eulaParagraph}>
+                All user-generated content (including marketplace listings, community posts, comments, and chat messages) is subject to moderation. YoFly Crew reserves the right to:
+                {"\n"}- Review and remove any reported objectionable content within 24 hours of receiving a report.
+                {"\n"}- Suspend, restrict, or permanently terminate accounts of users who violate these terms.
+              </Text>
+              <Text style={styles.eulaSectionHeader}>3. Safety Tools (Reporting & Blocking)</Text>
+              <Text style={styles.eulaParagraph}>
+                To ensure a safe environment, YoFly Crew provides:
+                {"\n"}- Reporting: Tap the options menu (...) on any listing, post, or comment to report it for moderator review.
+                {"\n"}- Blocking: You can block any user in chats or on the community boards to instantly hide their posts, comments, and messages from your view.
+              </Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => {
+                setAgreedToEula(true);
+                setShowEulaModal(false);
+              }}
+            >
+              <Text style={styles.modalCloseButtonText}>I Agree</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -765,5 +852,85 @@ const createStyles = (theme: AppTheme) =>
       fontWeight: '900',
       lineHeight: 20,
       textAlign: 'center',
+    },
+    eulaContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xs,
+    },
+    eulaCheckboxRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    eulaText: {
+      color: theme.colors.textMuted,
+      fontSize: 14,
+      flex: 1,
+    },
+    eulaLink: {
+      color: theme.colors.accent,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      padding: theme.spacing.lg,
+    },
+    modalContent: {
+      width: '100%',
+      maxHeight: '80%',
+      backgroundColor: theme.colors.surface,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      paddingBottom: theme.spacing.sm,
+    },
+    modalTitle: {
+      color: theme.colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    modalScroll: {
+      flexGrow: 1,
+      marginVertical: theme.spacing.sm,
+    },
+    eulaParagraph: {
+      color: theme.colors.textMuted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginBottom: theme.spacing.md,
+    },
+    eulaSectionHeader: {
+      color: theme.colors.text,
+      fontSize: 15,
+      fontWeight: '700',
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+    },
+    modalCloseButton: {
+      borderRadius: theme.roundness.full,
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: theme.spacing.xs,
+    },
+    modalCloseButtonText: {
+      color: '#050505',
+      fontSize: 16,
+      fontWeight: '900',
     },
   });

@@ -9,6 +9,7 @@ import { CrewVerificationService } from '../services/CrewVerificationService';
 import { ProfileRemoteService } from '../services/ProfileRemoteService';
 import { CrewVerificationMethod, CrewVerificationStatus } from '../types/verification';
 import { useProfile } from './ProfileContext';
+import { ModerationService } from '../services/ModerationService';
 
 interface AuthContextValue {
   session: Session | null;
@@ -318,6 +319,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       let bootSession: Session | null = null;
 
       try {
+        await ModerationService.init(); // Initialize user blocks list
         const recoveredSession = await handleAuthUrl(await Linking.getInitialURL());
         if (recoveredSession) {
           bootSession = recoveredSession;
@@ -352,8 +354,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     void bootstrap();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: any, nextSession: any) => {
       setSession(nextSession);
+      if (nextSession?.user) {
+        void ModerationService.syncBlockListWithDb(nextSession.user.id);
+      } else {
+        void ModerationService.clear();
+      }
+
       if (!nextSession?.user?.email) {
         setIsAdmin(false);
         return;
@@ -522,6 +530,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setIsAdmin(false);
       setIsPasswordRecoveryFlow(false);
       resetProfile();
+      void ModerationService.clear();
       setIsSubmitting(false);
     }
   };

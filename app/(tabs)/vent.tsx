@@ -13,6 +13,7 @@ import { CrewLockBanner } from '../../src/components/CrewLockBanner';
 import { CreatePostModal } from '../../src/components/CreatePostModal';
 import { PostCard } from '../../src/components/PostCard';
 import { Post, PostCategory } from '../../src/types/community';
+import { ModerationService } from '../../src/services/ModerationService';
 
 const VENT_RED = '#ff2f3a';
 
@@ -28,7 +29,13 @@ export default function VentRoomScreen() {
 
   const loadPosts = useCallback(async () => {
     const data = await CommunityService.getPosts(PostCategory.VENT, user?.id);
-    setPosts(data.filter((post) => post.category === PostCategory.VENT));
+    setPosts(
+      data.filter(
+        (post) =>
+          post.category === PostCategory.VENT &&
+          !ModerationService.isUserBlockedSync(post.authorId)
+      )
+    );
   }, [user?.id]);
 
   useFocusEffect(
@@ -205,6 +212,7 @@ export default function VentRoomScreen() {
                 onPress={() => router.push(`/post/${post.id}?category=${post.category}`)}
                 onToggleUpvote={handleToggleUpvote}
                 onToggleSave={handleToggleSave}
+                onBlockSuccess={loadPosts}
               />
             ))}
           </View>
