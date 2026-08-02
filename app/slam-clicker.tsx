@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Speech from 'expo-speech';
 import { useProfile } from '../src/context/ProfileContext';
 import { AppTheme, useTheme } from '../src/theme/theme';
 
@@ -132,6 +133,17 @@ export default function SlamClickerScreen() {
     if (translatedText) {
       Clipboard.setString(translatedText);
       RNAlert.alert('Copied!', 'Translation copied to clipboard.');
+    }
+  };
+
+  const handleSpeakTranslation = () => {
+    if (translatedText) {
+      Speech.stop();
+      Speech.speak(translatedText, {
+        language: targetLang,
+        pitch: 1.0,
+        rate: 0.9,
+      });
     }
   };
 
@@ -662,10 +674,16 @@ export default function SlamClickerScreen() {
             <View style={styles.translationOutputContainer}>
               <View style={styles.translationOutputHeader}>
                 <Text style={styles.translationLabel}>Translation</Text>
-                <TouchableOpacity style={styles.copyButton} onPress={handleCopyTranslation}>
-                  <Ionicons name="copy-outline" size={14} color={theme.colors.accent} />
-                  <Text style={styles.copyButtonText}>Copy</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 14 }}>
+                  <TouchableOpacity style={styles.copyButton} onPress={handleSpeakTranslation}>
+                    <Ionicons name="volume-high-outline" size={14} color={theme.colors.accent} />
+                    <Text style={styles.copyButtonText}>Speak</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.copyButton} onPress={handleCopyTranslation}>
+                    <Ionicons name="copy-outline" size={14} color={theme.colors.accent} />
+                    <Text style={styles.copyButtonText}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               <Text style={styles.translationText}>{translatedText}</Text>
             </View>
