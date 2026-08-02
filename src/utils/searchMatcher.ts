@@ -16,7 +16,9 @@ export const SEARCH_TAXONOMY: Record<string, string[]> = {
   restaurant: ['restaurant', 'dining', 'table service', 'steakhouse', 'grill', 'bistro', 'sit-down', 'sit down', 'bar & grill'],
   'car rentals': ['car rental', 'rentals', 'avis', 'hertz', 'enterprise', 'national car', 'budget', 'sixt', 'dollar', 'alamo'],
   hotel: ['hotel', 'motel', 'layover', 'crash pad', 'marriott', 'hilton', 'hyatt', 'twa', 'lodging', 'accommodation'],
-  shopping: ['shop', 'shopping', 'retail', 'store', 'duty free', 'tumi', 'outlet', 'news', 'gift', 'convenience', 'magazine', 'cart']
+  shopping: ['shop', 'shopping', 'retail', 'store', 'duty free', 'tumi', 'outlet', 'news', 'gift', 'convenience', 'magazine', 'cart'],
+  charger: ['charger', 'charging', 'power', 'outlet', 'usb', 'charge', 'station', 'electricity'],
+  charging: ['charger', 'charging', 'power', 'outlet', 'usb', 'charge', 'station', 'electricity']
 };
 
 /**

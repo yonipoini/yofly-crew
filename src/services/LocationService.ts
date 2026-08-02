@@ -1507,8 +1507,8 @@ export const LocationService = {
       const overpassQuery = `
         [out:json][timeout:25];
         (
-          node["amenity"~"restaurant|cafe|fast_food|bar|pub|bank|atm|car_rental"](${latMin},${lonMin},${latMax},${lonMax});
-          way["amenity"~"restaurant|cafe|fast_food|bar|pub|bank|atm|car_rental"](${latMin},${lonMin},${latMax},${lonMax});
+          node["amenity"~"restaurant|cafe|fast_food|bar|pub|bank|atm|car_rental|charging_station"](${latMin},${lonMin},${latMax},${lonMax});
+          way["amenity"~"restaurant|cafe|fast_food|bar|pub|bank|atm|car_rental|charging_station"](${latMin},${lonMin},${latMax},${lonMax});
           node["tourism"~"hotel|motel|guest_house"](${latMin},${lonMin},${latMax},${lonMax});
           way["tourism"~"hotel|motel|guest_house"](${latMin},${lonMin},${latMax},${lonMax});
           node["shop"](${latMin},${lonMin},${latMax},${lonMax});
@@ -1546,6 +1546,7 @@ export const LocationService = {
           let name = tags.name || tags.operator || tags.brand;
           if (!name) {
             if (tags.amenity === 'atm') name = 'Airport ATM';
+            else if (tags.amenity === 'charging_station') name = 'Charging Station';
             else if (tags.amenity === 'car_rental') name = `${tags.operator || 'Airport'} Car Rental`;
             else if (tags.tourism === 'hotel') name = 'Airport Hotel';
             else if (tags.shop) name = `${tags.shop.charAt(0).toUpperCase() + tags.shop.slice(1)} Shop`;
@@ -1555,7 +1556,7 @@ export const LocationService = {
           let type = LocationType.RESTAURANT;
           if (tags.amenity === 'cafe') type = LocationType.COFFEE;
           else if (tags.leisure === 'fitness_centre' || tags.leisure === 'sports_centre') type = LocationType.GYM;
-          else if (tags.amenity === 'bank' || tags.amenity === 'atm') type = LocationType.SERVICE;
+          else if (tags.amenity === 'bank' || tags.amenity === 'atm' || tags.amenity === 'charging_station') type = LocationType.SERVICE;
           else if (tags.shop) type = LocationType.SHOPPING;
           else if (tags.tourism === 'hotel') type = LocationType.LOUNGE;
           else if (tags.amenity === 'bar' || tags.amenity === 'pub') type = LocationType.NIGHTLIFE;

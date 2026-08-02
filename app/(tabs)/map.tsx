@@ -1350,6 +1350,15 @@ export default function MapScreen() {
   const [selectedDirectoryCategory, setSelectedDirectoryCategory] = useState<DirectoryCategory>('ALL');
   const [selectedDirectoryEntry, setSelectedDirectoryEntry] = useState<DirectoryEntry | null>(null);
   const [directorySearchQuery, setDirectorySearchQuery] = useState('');
+  const [searchInputVal, setSearchInputVal] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDirectorySearchQuery(searchInputVal);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [searchInputVal]);
+
   const [isDirectoryExpanded, setIsDirectoryExpanded] = useState(false);
   const [isTerminalSelectorVisible, setIsTerminalSelectorVisible] = useState(false);
   const [isRefreshingDirectoryBusinesses, setIsRefreshingDirectoryBusinesses] = useState(false);
@@ -2719,6 +2728,7 @@ export default function MapScreen() {
   };
 
   const handleSelectLocation = async (location: CrewLocation | null, shouldFocus = false) => {
+    Keyboard.dismiss();
     setIsUtilityPanelVisible(false);
     setIsPlaceIntelModalVisible(false);
     setIsAddPlaceModalVisible(false);
@@ -3197,6 +3207,7 @@ export default function MapScreen() {
   };
 
   const handleSelectMapPoint = async (coordinate: Coordinates, position?: { x: number; y: number }) => {
+    Keyboard.dismiss();
     if (isAdjustingAlertPin) {
       setTempAlertCoordinate(coordinate);
       return;
@@ -4130,7 +4141,7 @@ export default function MapScreen() {
         isDark={isDark}
       />
 
-      {displayMode === 'AIRPORT' && !isMapboxActive && (
+      {displayMode === 'AIRPORT' && (
         (activeAirportCode === 'MCO' || activeAirportCode === 'JFK') ? (
           <>
             <View style={styles.indoorSelectorPillContainer}>
@@ -4336,8 +4347,8 @@ export default function MapScreen() {
           <View style={styles.floatingSearchInputBox}>
             <Ionicons name="search" size={18} color={theme.colors.accent} />
             <TextInput
-              value={directorySearchQuery}
-              onChangeText={setDirectorySearchQuery}
+              value={searchInputVal}
+              onChangeText={setSearchInputVal}
               placeholder="Search dining, gates, shops..."
               placeholderTextColor={theme.colors.textMuted}
               autoCapitalize="none"
@@ -4346,10 +4357,13 @@ export default function MapScreen() {
             />
             {isSearchingGoogle ? (
               <ActivityIndicator size="small" color={theme.colors.accent} style={{ marginRight: 8 }} />
-            ) : directorySearchQuery ? (
+            ) : searchInputVal ? (
               <TouchableOpacity
                 style={styles.floatingSearchClear}
-                onPress={() => setDirectorySearchQuery('')}
+                onPress={() => {
+                  setSearchInputVal('');
+                  setDirectorySearchQuery('');
+                }}
               >
                 <Ionicons name="close" size={14} color={theme.colors.textMuted} />
               </TouchableOpacity>
@@ -4381,8 +4395,8 @@ export default function MapScreen() {
           directorySummaryCount={directorySummaryCount}
           isDirectoryExpanded={isDirectoryExpanded}
           setIsDirectoryExpanded={setIsDirectoryExpanded}
-          directorySearchQuery={directorySearchQuery}
-          setDirectorySearchQuery={setDirectorySearchQuery}
+          directorySearchQuery={searchInputVal}
+          setDirectorySearchQuery={setSearchInputVal}
           selectedDirectoryCategory={selectedDirectoryCategory}
           setSelectedDirectoryCategory={setSelectedDirectoryCategory}
           selectedDirectoryEntry={selectedDirectoryEntry}

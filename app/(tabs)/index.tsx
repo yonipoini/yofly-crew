@@ -86,6 +86,8 @@ export default function HomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTSAModalVisible, setIsTSAModalVisible] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<OpsSignal | null>(null);
+  const [showAllDepartures, setShowAllDepartures] = useState(false);
+  const [showAllArrivals, setShowAllArrivals] = useState(false);
   const { unreadCount } = useUnreadNotificationCount(user?.id);
   const unreadPulse = React.useRef(new Animated.Value(0)).current;
   const hasUnreadNotifications = unreadCount > 0;
@@ -136,6 +138,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void loadSnapshot();
+    setShowAllDepartures(false);
+    setShowAllArrivals(false);
 
     const subscription = TSAService.subscribeToUpdates(() => {
       void loadSnapshot();
@@ -738,9 +742,24 @@ export default function HomeScreen() {
               {departures.some((entry) => entry.source === 'live') ? 'Live feed' : 'Fallback feed'}
             </Text>
           </View>
-          {departures.map((entry) => (
+          {(showAllDepartures ? departures : departures.slice(0, 5)).map((entry) => (
             <FlightRow key={entry.id} entry={entry} theme={theme} />
           ))}
+          {departures.length > 5 && (
+            <TouchableOpacity
+              style={styles.viewMoreButton}
+              onPress={() => setShowAllDepartures(!showAllDepartures)}
+            >
+              <Text style={styles.viewMoreText}>
+                {showAllDepartures ? 'Show Less' : `View More (${departures.length - 5} more)`}
+              </Text>
+              <Ionicons
+                name={showAllDepartures ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={theme.colors.accent}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -751,7 +770,26 @@ export default function HomeScreen() {
             </Text>
           </View>
           {arrivals.length > 0 ? (
-            arrivals.map((entry) => <FlightRow key={entry.id} entry={entry} theme={theme} />)
+            <>
+              {(showAllArrivals ? arrivals : arrivals.slice(0, 5)).map((entry) => (
+                <FlightRow key={entry.id} entry={entry} theme={theme} />
+              ))}
+              {arrivals.length > 5 && (
+                <TouchableOpacity
+                  style={styles.viewMoreButton}
+                  onPress={() => setShowAllArrivals(!showAllArrivals)}
+                >
+                  <Text style={styles.viewMoreText}>
+                    {showAllArrivals ? 'Show Less' : `View More (${arrivals.length - 5} more)`}
+                  </Text>
+                  <Ionicons
+                    name={showAllArrivals ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={theme.colors.accent}
+                  />
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No arrival rows available</Text>
@@ -1508,6 +1546,24 @@ const createStyles = (theme: AppTheme) =>
       fontSize: 11,
       fontWeight: '700',
       lineHeight: 16,
+    },
+    viewMoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      marginHorizontal: theme.spacing.sm,
+      marginTop: 4,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.cardSoft,
+      gap: 6,
+    },
+    viewMoreText: {
+      color: theme.colors.accent,
+      fontSize: 14,
+      fontWeight: '600',
     },
     bottomSpacer: {
       height: 100,
