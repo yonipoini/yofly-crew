@@ -533,6 +533,20 @@ export default function HomeScreen() {
               <Text style={styles.actionLabel}>Discounts</Text>
               <Text style={styles.actionHint}>Hotel rates & local crew deals</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/translator')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: theme.colors.accent + '18' }]}>
+                <Ionicons name="language-outline" size={22} color={theme.colors.accent} />
+              </View>
+              <Text style={styles.actionLabel}>Translator</Text>
+              <Text style={styles.actionHint}>Real-time voice & text layover translate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/schedule-import')}>
+              <View style={[styles.actionIconWrap, { backgroundColor: theme.colors.primary + '18' }]}>
+                <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.actionLabel}>Import Schedule</Text>
+              <Text style={styles.actionHint}>Import calendar pairings & flights</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
