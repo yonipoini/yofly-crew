@@ -15,7 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.yoflycrew.app",
       "supportsTablet": true,
-      "buildNumber": "226",
+      "buildNumber": "227",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -68,13 +68,6 @@
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
-        }
-      ],
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Allow YoFly Crew to use the microphone for voice dictation.",
-          "speechRecognitionPermission": "Allow YoFly Crew to use speech recognition to transcribe your voice."
         }
       ]
     ],

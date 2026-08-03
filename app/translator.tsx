@@ -16,7 +16,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { AppTheme, useTheme } from '../src/theme/theme';
 
 const LANGUAGES = [
@@ -30,28 +29,11 @@ const LANGUAGES = [
   { code: 'zh-CN', label: 'Chinese', flag: '🇨🇳' },
 ];
 
-const isSpeechSupported =
-  typeof ExpoSpeechRecognitionModule !== 'undefined' && ExpoSpeechRecognitionModule !== null;
-
-function SpeechEventListener({
-  setIsListening,
-  setInputText,
-}: {
-  setIsListening: (v: boolean) => void;
-  setInputText: (t: string) => void;
-}) {
-  useSpeechRecognitionEvent('start', () => setIsListening(true));
-  useSpeechRecognitionEvent('end', () => setIsListening(false));
-  useSpeechRecognitionEvent('result', (event) => {
-    if (event.results && event.results[0]) {
-      setInputText(event.results[0].transcript);
-    }
-  });
-  useSpeechRecognitionEvent('error', (event) => {
-    console.warn('Speech recognition error:', event.error, event.message);
-    setIsListening(false);
-  });
-  return null;
+interface TranslationHistoryItem {
+  id: string;
+  original: string;
+  translated: string;
+  targetLang: string;
 }
 
 export default function TranslatorScreen() {
@@ -59,48 +41,11 @@ export default function TranslatorScreen() {
   const router = useRouter();
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
 
-  interface TranslationHistoryItem {
-    id: string;
-    original: string;
-    translated: string;
-    targetLang: string;
-  }
-
   const [inputText, setInputText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [targetLang, setTargetLang] = useState('es');
   const [isTranslating, setIsTranslating] = useState(false);
   const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
-  const [isListening, setIsListening] = useState(false);
-
-  const handleMicPress = async () => {
-    if (!isSpeechSupported) {
-      Alert.alert(
-        'Voice Dictation Unavailable',
-        "Expo Go does not support custom native voice recognition. Please tap the text box and use your keyboard's microphone button, or install and open the TestFlight build to test this feature!"
-      );
-      return;
-    }
-    const SpeechModule = ExpoSpeechRecognitionModule as any;
-    if (isListening) {
-      SpeechModule.stop();
-    } else {
-      const permission = await SpeechModule.requestPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          'Permission Denied',
-          'Microphone and Speech Recognition permissions are required for voice translations.'
-        );
-        return;
-      }
-      setInputText('');
-      setTranslatedText('');
-      SpeechModule.start({
-        lang: 'en-US',
-        interimResults: true,
-      });
-    }
-  };
 
   // Load history on mount
   useEffect(() => {
@@ -132,10 +77,10 @@ export default function TranslatorScreen() {
         targetLang: langCode,
       };
       const updated = [newItem, ...filtered].slice(0, 5); // Save last 5 translations
-      
-      // Async save
-      void AsyncStorage.setItem('yofly.translator.history', JSON.stringify(updated))
-        .catch(err => console.warn('Failed to persist translation history:', err));
+
+      void AsyncStorage.setItem('yofly.translator.history', JSON.stringify(updated)).catch(
+        (err) => console.warn('Failed to persist translation history:', err)
+      );
 
       return updated;
     });
@@ -157,7 +102,9 @@ export default function TranslatorScreen() {
     }
     setIsTranslating(true);
     try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${langCode}&dt=t&q=${encodeURIComponent(text.trim())}`;
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${langCode}&dt=t&q=${encodeURIComponent(
+        text.trim()
+      )}`;
       const response = await fetch(url);
       const result = await response.json();
       const translated = result[0].map((item: any) => item[0]).join('');
@@ -165,6 +112,7 @@ export default function TranslatorScreen() {
       void saveToHistory(text, translated, langCode);
     } catch (err) {
       console.warn('Real-time translation failed:', err);
+      Alert.alert('Translation Error', 'Unable to complete translation. Please check your internet connection.');
     } finally {
       setIsTranslating(false);
     }
@@ -190,9 +138,6 @@ export default function TranslatorScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {isSpeechSupported && (
-        <SpeechEventListener setIsListening={setIsListening} setInputText={setInputText} />
-      )}
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -203,19 +148,32 @@ export default function TranslatorScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {/* Main Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="language-outline" size={20} color={theme.colors.accent} />
-            <Text style={styles.cardTitle}>Real-Time Translator</Text>
+            <Text style={styles.cardTitle}>Real-Time Layover Translator</Text>
           </View>
           <Text style={styles.cardInfo}>
-            Translate crew phrases, airport instructions, or hotel signs instantly. Auto-detects input language. Use keyboard voice dictation to speak directly.
+            Translate crew phrases, airport signs, or hotel requests instantly. Auto-detects input language.
           </Text>
+
+          {/* Voice Input Guide Pill */}
+          <View style={styles.dictationTipPill}>
+            <Ionicons name="mic" size={14} color={theme.colors.accent} />
+            <Text style={styles.dictationTipText}>
+              <Text style={{ fontWeight: 'bold' }}>Voice Input:</Text> Tap the text box and use the microphone icon on your keyboard to speak in real-time.
+            </Text>
+          </View>
 
           {/* Language Selector */}
           <View style={styles.languageScrollContainer}>
             <Text style={styles.label}>Select Target Language</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.languageScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.languageScroll}
+            >
               {LANGUAGES.map((lang) => {
                 const active = targetLang === lang.code;
                 return (
@@ -231,7 +189,12 @@ export default function TranslatorScreen() {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.languageFlag}>{lang.flag}</Text>
-                    <Text style={[styles.languageChipText, active && styles.languageChipTextActive]}>
+                    <Text
+                      style={[
+                        styles.languageChipText,
+                        active && styles.languageChipTextActive,
+                      ]}
+                    >
                       {lang.label}
                     </Text>
                   </TouchableOpacity>
@@ -240,11 +203,11 @@ export default function TranslatorScreen() {
             </ScrollView>
           </View>
 
-          {/* Input box */}
+          {/* Input Box */}
           <View style={styles.translatorInputWrapper}>
             <TextInput
               style={styles.translatorInput}
-              placeholder="Type here to translate crew phrases..."
+              placeholder="Type or speak here to translate..."
               placeholderTextColor={theme.colors.textMuted}
               multiline
               value={inputText}
@@ -268,22 +231,10 @@ export default function TranslatorScreen() {
           {/* Action Row */}
           <View style={styles.translationActionRow}>
             <TouchableOpacity
-              style={[styles.micButton, isListening && styles.micButtonActive]}
-              onPress={handleMicPress}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={isListening ? 'mic' : 'mic-outline'}
-                size={18}
-                color={isListening ? '#FFFFFF' : theme.colors.accent}
-              />
-              <Text style={[styles.micButtonText, isListening && styles.micButtonTextActive]}>
-                {isListening ? 'Listening...' : 'Speak'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.translateButton, !inputText.trim() && styles.translateButtonDisabled]}
+              style={[
+                styles.translateButton,
+                !inputText.trim() && styles.translateButtonDisabled,
+              ]}
               onPress={() => handleTranslate(inputText, targetLang)}
               disabled={!inputText.trim() || isTranslating}
               activeOpacity={0.8}
@@ -292,25 +243,44 @@ export default function TranslatorScreen() {
                 <ActivityIndicator size="small" color="#08070B" />
               ) : (
                 <>
-                  <Ionicons name="globe-outline" size={16} color="#08070B" style={{ marginRight: 6 }} />
+                  <Ionicons
+                    name="globe-outline"
+                    size={16}
+                    color="#08070B"
+                    style={{ marginRight: 6 }}
+                  />
                   <Text style={styles.translateButtonText}>Translate</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Output Card */}
+          {/* Translation Output Card */}
           {translatedText ? (
             <View style={styles.translationOutputContainer}>
               <View style={styles.translationOutputHeader}>
                 <Text style={styles.translationLabel}>Translation</Text>
                 <View style={{ flexDirection: 'row', gap: 14 }}>
-                  <TouchableOpacity style={styles.copyButton} onPress={handleSpeakTranslation}>
-                    <Ionicons name="volume-high-outline" size={14} color={theme.colors.accent} />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={handleSpeakTranslation}
+                  >
+                    <Ionicons
+                      name="volume-high-outline"
+                      size={14}
+                      color={theme.colors.accent}
+                    />
                     <Text style={styles.copyButtonText}>Speak</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.copyButton} onPress={handleCopyTranslation}>
-                    <Ionicons name="copy-outline" size={14} color={theme.colors.accent} />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={handleCopyTranslation}
+                  >
+                    <Ionicons
+                      name="copy-outline"
+                      size={14}
+                      color={theme.colors.accent}
+                    />
                     <Text style={styles.copyButtonText}>Copy</Text>
                   </TouchableOpacity>
                 </View>
@@ -320,12 +290,22 @@ export default function TranslatorScreen() {
           ) : null}
         </View>
 
-        {/* Saved & Recent Translations card */}
+        {/* Saved & Recent Translations Card */}
         {history.length > 0 ? (
           <View style={[styles.card, { marginTop: theme.spacing.md }]}>
             <View style={styles.historyHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-                <Ionicons name="time-outline" size={20} color={theme.colors.accent} />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: theme.spacing.sm,
+                }}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={20}
+                  color={theme.colors.accent}
+                />
                 <Text style={styles.cardTitle}>Recent Translations</Text>
               </View>
               <TouchableOpacity onPress={clearHistory} style={styles.clearHistoryBtn}>
@@ -336,7 +316,8 @@ export default function TranslatorScreen() {
 
             <View style={styles.historyList}>
               {history.map((item) => {
-                const targetFlag = LANGUAGES.find((l) => l.code === item.targetLang)?.flag || '🌐';
+                const targetFlag =
+                  LANGUAGES.find((l) => l.code === item.targetLang)?.flag || '🌐';
                 return (
                   <View key={item.id} style={styles.historyItem}>
                     <TouchableOpacity
@@ -361,10 +342,17 @@ export default function TranslatorScreen() {
                         style={styles.historyActionBtn}
                         onPress={() => {
                           Speech.stop();
-                          Speech.speak(item.translated, { language: item.targetLang, rate: 0.9 });
+                          Speech.speak(item.translated, {
+                            language: item.targetLang,
+                            rate: 0.9,
+                          });
                         }}
                       >
-                        <Ionicons name="volume-high-outline" size={16} color={theme.colors.accent} />
+                        <Ionicons
+                          name="volume-high-outline"
+                          size={16}
+                          color={theme.colors.accent}
+                        />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.historyActionBtn}
@@ -373,7 +361,11 @@ export default function TranslatorScreen() {
                           Alert.alert('Copied!', 'Translation copied to clipboard.');
                         }}
                       >
-                        <Ionicons name="copy-outline" size={16} color={theme.colors.textMuted} />
+                        <Ionicons
+                          name="copy-outline"
+                          size={16}
+                          color={theme.colors.textMuted}
+                        />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -440,7 +432,25 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
       color: theme.colors.textMuted,
       fontSize: 13,
       lineHeight: 18,
+      marginBottom: theme.spacing.sm,
+    },
+    dictationTipPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.accent + '12',
+      borderWidth: 1,
+      borderColor: theme.colors.accent + '33',
+      borderRadius: theme.roundness.md,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
       marginBottom: theme.spacing.md,
+      gap: 8,
+    },
+    dictationTipText: {
+      color: theme.colors.text,
+      fontSize: 12,
+      flex: 1,
+      lineHeight: 16,
     },
     label: {
       color: theme.colors.text,
@@ -503,33 +513,10 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
     },
     translationActionRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
       alignItems: 'center',
       marginTop: theme.spacing.sm,
       marginBottom: theme.spacing.md,
-    },
-    micButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.cardSoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: theme.roundness.md,
-      gap: 6,
-    },
-    micButtonActive: {
-      backgroundColor: theme.colors.error,
-      borderColor: theme.colors.error,
-    },
-    micButtonText: {
-      color: theme.colors.accent,
-      fontSize: 13,
-      fontWeight: 'bold',
-    },
-    micButtonTextActive: {
-      color: '#FFFFFF',
     },
     translateButton: {
       flexDirection: 'row',
