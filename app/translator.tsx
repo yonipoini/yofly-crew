@@ -30,6 +30,30 @@ const LANGUAGES = [
   { code: 'zh-CN', label: 'Chinese', flag: '🇨🇳' },
 ];
 
+const isSpeechSupported =
+  typeof ExpoSpeechRecognitionModule !== 'undefined' && ExpoSpeechRecognitionModule !== null;
+
+function SpeechEventListener({
+  setIsListening,
+  setInputText,
+}: {
+  setIsListening: (v: boolean) => void;
+  setInputText: (t: string) => void;
+}) {
+  useSpeechRecognitionEvent('start', () => setIsListening(true));
+  useSpeechRecognitionEvent('end', () => setIsListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    if (event.results && event.results[0]) {
+      setInputText(event.results[0].transcript);
+    }
+  });
+  useSpeechRecognitionEvent('error', (event) => {
+    console.warn('Speech recognition error:', event.error, event.message);
+    setIsListening(false);
+  });
+  return null;
+}
+
 export default function TranslatorScreen() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
@@ -49,20 +73,14 @@ export default function TranslatorScreen() {
   const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
   const [isListening, setIsListening] = useState(false);
 
-  // Hook-based listeners for real-time speech results
-  useSpeechRecognitionEvent('start', () => setIsListening(true));
-  useSpeechRecognitionEvent('end', () => setIsListening(false));
-  useSpeechRecognitionEvent('result', (event) => {
-    if (event.results && event.results[0]) {
-      setInputText(event.results[0].transcript);
-    }
-  });
-  useSpeechRecognitionEvent('error', (event) => {
-    console.warn('Speech recognition error:', event.error, event.message);
-    setIsListening(false);
-  });
-
   const handleMicPress = async () => {
+    if (!isSpeechSupported) {
+      Alert.alert(
+        'Voice Dictation Unavailable',
+        "Expo Go does not support custom native voice recognition. Please tap the text box and use your keyboard's microphone button, or install and open the TestFlight build to test this feature!"
+      );
+      return;
+    }
     const SpeechModule = ExpoSpeechRecognitionModule as any;
     if (isListening) {
       SpeechModule.stop();
@@ -172,6 +190,9 @@ export default function TranslatorScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {isSpeechSupported && (
+        <SpeechEventListener setIsListening={setIsListening} setInputText={setInputText} />
+      )}
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
