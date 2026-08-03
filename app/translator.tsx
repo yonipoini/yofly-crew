@@ -16,6 +16,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 import { AppTheme, useTheme } from '../src/theme/theme';
 
 const LANGUAGES = [
@@ -36,6 +40,30 @@ interface TranslationHistoryItem {
   targetLang: string;
 }
 
+const isSpeechSupported =
+  typeof ExpoSpeechRecognitionModule !== 'undefined' && ExpoSpeechRecognitionModule !== null;
+
+function SpeechEventListener({
+  setIsListening,
+  setInputText,
+}: {
+  setIsListening: (v: boolean) => void;
+  setInputText: (t: string) => void;
+}) {
+  useSpeechRecognitionEvent('start', () => setIsListening(true));
+  useSpeechRecognitionEvent('end', () => setIsListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    if (event.results && event.results[0]) {
+      setInputText(event.results[0].transcript);
+    }
+  });
+  useSpeechRecognitionEvent('error', (event) => {
+    console.warn('Speech recognition error:', event.error, event.message);
+    setIsListening(false);
+  });
+  return null;
+}
+
 export default function TranslatorScreen() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
@@ -46,6 +74,7 @@ export default function TranslatorScreen() {
   const [targetLang, setTargetLang] = useState('es');
   const [isTranslating, setIsTranslating] = useState(false);
   const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
+  const [isListening, setIsListening] = useState(false);
 
   // Load history on mount
   useEffect(() => {
@@ -76,7 +105,7 @@ export default function TranslatorScreen() {
         translated: translated.trim(),
         targetLang: langCode,
       };
-      const updated = [newItem, ...filtered].slice(0, 5); // Save last 5 translations
+      const updated = [newItem, ...filtered].slice(0, 5);
 
       void AsyncStorage.setItem('yofly.translator.history', JSON.stringify(updated)).catch(
         (err) => console.warn('Failed to persist translation history:', err)
@@ -92,6 +121,35 @@ export default function TranslatorScreen() {
       await AsyncStorage.removeItem('yofly.translator.history');
     } catch (err) {
       console.warn('Failed to clear translation history:', err);
+    }
+  };
+
+  const handleMicPress = async () => {
+    if (!isSpeechSupported) {
+      Alert.alert(
+        'Voice Dictation Unavailable in Expo Go',
+        "Expo Go does not support custom native voice recognition. Please tap the text box and use your keyboard's microphone button, or open the TestFlight build to use the dedicated mic button!"
+      );
+      return;
+    }
+    const SpeechModule = ExpoSpeechRecognitionModule as any;
+    if (isListening) {
+      SpeechModule.stop();
+    } else {
+      const permission = await SpeechModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Denied',
+          'Microphone and Speech Recognition permissions are required for voice translations.'
+        );
+        return;
+      }
+      setInputText('');
+      setTranslatedText('');
+      SpeechModule.start({
+        lang: 'en-US',
+        interimResults: true,
+      });
     }
   };
 
@@ -138,6 +196,9 @@ export default function TranslatorScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {isSpeechSupported && (
+        <SpeechEventListener setIsListening={setIsListening} setInputText={setInputText} />
+      )}
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -157,14 +218,6 @@ export default function TranslatorScreen() {
           <Text style={styles.cardInfo}>
             Translate crew phrases, airport signs, or hotel requests instantly. Auto-detects input language.
           </Text>
-
-          {/* Voice Input Guide Pill */}
-          <View style={styles.dictationTipPill}>
-            <Ionicons name="mic" size={14} color={theme.colors.accent} />
-            <Text style={styles.dictationTipText}>
-              <Text style={{ fontWeight: 'bold' }}>Voice Input:</Text> Tap the text box and use the microphone icon on your keyboard to speak in real-time.
-            </Text>
-          </View>
 
           {/* Language Selector */}
           <View style={styles.languageScrollContainer}>
@@ -230,6 +283,21 @@ export default function TranslatorScreen() {
 
           {/* Action Row */}
           <View style={styles.translationActionRow}>
+            <TouchableOpacity
+              style={[styles.micButton, isListening && styles.micButtonActive]}
+              onPress={handleMicPress}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isListening ? 'mic' : 'mic-outline'}
+                size={18}
+                color={isListening ? '#FFFFFF' : theme.colors.accent}
+              />
+              <Text style={[styles.micButtonText, isListening && styles.micButtonTextActive]}>
+                {isListening ? 'Listening...' : 'Voice Dictate'}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.translateButton,
@@ -432,25 +500,7 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
       color: theme.colors.textMuted,
       fontSize: 13,
       lineHeight: 18,
-      marginBottom: theme.spacing.sm,
-    },
-    dictationTipPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.accent + '12',
-      borderWidth: 1,
-      borderColor: theme.colors.accent + '33',
-      borderRadius: theme.roundness.md,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
       marginBottom: theme.spacing.md,
-      gap: 8,
-    },
-    dictationTipText: {
-      color: theme.colors.text,
-      fontSize: 12,
-      flex: 1,
-      lineHeight: 16,
     },
     label: {
       color: theme.colors.text,
@@ -513,10 +563,33 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
     },
     translationActionRow: {
       flexDirection: 'row',
-      justifyContent: 'flex-end',
+      justifyContent: 'space-between',
       alignItems: 'center',
       marginTop: theme.spacing.sm,
       marginBottom: theme.spacing.md,
+    },
+    micButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: theme.roundness.md,
+      gap: 6,
+    },
+    micButtonActive: {
+      backgroundColor: theme.colors.error,
+      borderColor: theme.colors.error,
+    },
+    micButtonText: {
+      color: theme.colors.accent,
+      fontSize: 13,
+      fontWeight: 'bold',
+    },
+    micButtonTextActive: {
+      color: '#FFFFFF',
     },
     translateButton: {
       flexDirection: 'row',
