@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { AppTheme, useTheme } from '../src/theme/theme';
 
 const LANGUAGES = [
@@ -46,6 +47,42 @@ export default function TranslatorScreen() {
   const [targetLang, setTargetLang] = useState('es');
   const [isTranslating, setIsTranslating] = useState(false);
   const [history, setHistory] = useState<TranslationHistoryItem[]>([]);
+  const [isListening, setIsListening] = useState(false);
+
+  // Hook-based listeners for real-time speech results
+  useSpeechRecognitionEvent('start', () => setIsListening(true));
+  useSpeechRecognitionEvent('end', () => setIsListening(false));
+  useSpeechRecognitionEvent('result', (event) => {
+    if (event.results && event.results[0]) {
+      setInputText(event.results[0].transcript);
+    }
+  });
+  useSpeechRecognitionEvent('error', (event) => {
+    console.warn('Speech recognition error:', event.error, event.message);
+    setIsListening(false);
+  });
+
+  const handleMicPress = async () => {
+    const SpeechModule = ExpoSpeechRecognitionModule as any;
+    if (isListening) {
+      SpeechModule.stop();
+    } else {
+      const permission = await SpeechModule.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Denied',
+          'Microphone and Speech Recognition permissions are required for voice translations.'
+        );
+        return;
+      }
+      setInputText('');
+      setTranslatedText('');
+      SpeechModule.start({
+        lang: 'en-US',
+        interimResults: true,
+      });
+    }
+  };
 
   // Load history on mount
   useEffect(() => {
@@ -209,6 +246,21 @@ export default function TranslatorScreen() {
 
           {/* Action Row */}
           <View style={styles.translationActionRow}>
+            <TouchableOpacity
+              style={[styles.micButton, isListening && styles.micButtonActive]}
+              onPress={handleMicPress}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isListening ? 'mic' : 'mic-outline'}
+                size={18}
+                color={isListening ? '#FFFFFF' : theme.colors.accent}
+              />
+              <Text style={[styles.micButtonText, isListening && styles.micButtonTextActive]}>
+                {isListening ? 'Listening...' : 'Speak'}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.translateButton, !inputText.trim() && styles.translateButtonDisabled]}
               onPress={() => handleTranslate(inputText, targetLang)}
@@ -430,9 +482,33 @@ const createStyles = (theme: AppTheme, isDark: boolean) =>
     },
     translationActionRow: {
       flexDirection: 'row',
-      justifyContent: 'flex-end',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginTop: theme.spacing.sm,
       marginBottom: theme.spacing.md,
+    },
+    micButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: theme.roundness.md,
+      gap: 6,
+    },
+    micButtonActive: {
+      backgroundColor: theme.colors.error,
+      borderColor: theme.colors.error,
+    },
+    micButtonText: {
+      color: theme.colors.accent,
+      fontSize: 13,
+      fontWeight: 'bold',
+    },
+    micButtonTextActive: {
+      color: '#FFFFFF',
     },
     translateButton: {
       flexDirection: 'row',
