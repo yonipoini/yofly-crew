@@ -12,7 +12,7 @@ const allowedGoogleApiFiles = new Set([
 
 const walk = (dir, files = []) => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === '.expo' || entry.name === '.expo-export') {
+    if (entry.name === 'node_modules' || entry.name === '.expo' || entry.name === '.expo-export' || entry.name === 'dist') {
       continue;
     }
 

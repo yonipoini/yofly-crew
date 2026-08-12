@@ -27,6 +27,8 @@ export default function VentRoomScreen() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<'SWIPE' | 'FEED'>('SWIPE');
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
 
   const loadPosts = useCallback(async () => {
     const data = await CommunityService.getPosts(PostCategory.VENT, user?.id);
@@ -214,20 +216,96 @@ export default function VentRoomScreen() {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
+        <View style={styles.modeToggleRow}>
+          <TouchableOpacity
+            style={[styles.modeToggleButton, viewMode === 'SWIPE' && styles.modeToggleButtonActive]}
+            onPress={() => setViewMode('SWIPE')}
+          >
+            <Ionicons name="swap-horizontal-outline" size={16} color={viewMode === 'SWIPE' ? theme.colors.background : VENT_RED} />
+            <Text style={[styles.modeToggleText, viewMode === 'SWIPE' && styles.modeToggleTextActive]}>Swipe Deck</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeToggleButton, viewMode === 'FEED' && styles.modeToggleButtonActive]}
+            onPress={() => setViewMode('FEED')}
+          >
+            <Ionicons name="list-outline" size={16} color={viewMode === 'FEED' ? theme.colors.background : VENT_RED} />
+            <Text style={[styles.modeToggleText, viewMode === 'FEED' && styles.modeToggleTextActive]}>Feed View</Text>
+          </TouchableOpacity>
+        </View>
+
         {posts.length > 0 ? (
-          <View style={styles.feed}>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                isVentMode
-                onPress={() => router.push(`/post/${post.id}?category=${post.category}`)}
-                onToggleUpvote={handleToggleUpvote}
-                onToggleSave={handleToggleSave}
-                onBlockSuccess={loadPosts}
-              />
-            ))}
-          </View>
+          viewMode === 'SWIPE' ? (
+            <View style={styles.swipeDeckContainer}>
+              {activeCardIndex < posts.length ? (
+                <View style={styles.swipeCard}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.anonymousBadge}>
+                      <Ionicons name="eye-off" size={14} color={VENT_RED} />
+                      <Text style={styles.anonymousBadgeText}>
+                        {posts[activeCardIndex].isAnonymous ? 'Anonymous Crew' : posts[activeCardIndex].authorName}
+                      </Text>
+                    </View>
+                    {posts[activeCardIndex].airportCode ? (
+                      <View style={styles.cardAirportTag}>
+                        <Text style={styles.cardAirportText}>#{posts[activeCardIndex].airportCode}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <Text style={styles.cardTitle}>{posts[activeCardIndex].title}</Text>
+                  <Text style={styles.cardContent}>{posts[activeCardIndex].content}</Text>
+
+                  <View style={styles.swipeActionsRow}>
+                    <TouchableOpacity
+                      style={styles.swipeSkipButton}
+                      onPress={() => setActiveCardIndex((prev) => (prev + 1) % posts.length)}
+                    >
+                      <Ionicons name="close" size={22} color={theme.colors.textMuted} />
+                      <Text style={styles.swipeSkipText}>Next Vent</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.swipeUpvoteButton,
+                        posts[activeCardIndex].isUpvoted && styles.swipeUpvoteButtonActive,
+                      ]}
+                      onPress={() => handleToggleUpvote(posts[activeCardIndex])}
+                    >
+                      <Ionicons name="flame" size={22} color="#ffffff" />
+                      <Text style={styles.swipeUpvoteText}>
+                        {posts[activeCardIndex].upvotes} {posts[activeCardIndex].isUpvoted ? 'Vented!' : 'Upvote'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.cardCounter}>
+                    Vent {activeCardIndex + 1} of {posts.length}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Ionicons name="checkmark-circle-outline" size={44} color={VENT_RED} />
+                  <Text style={styles.emptyTitle}>You're all caught up!</Text>
+                  <TouchableOpacity style={styles.resetButton} onPress={() => setActiveCardIndex(0)}>
+                    <Text style={styles.resetButtonText}>Replay Vents</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.feed}>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isVentMode
+                  onPress={() => router.push(`/post/${post.id}?category=${post.category}`)}
+                  onToggleUpvote={handleToggleUpvote}
+                  onToggleSave={handleToggleSave}
+                  onBlockSuccess={loadPosts}
+                />
+              ))}
+            </View>
+          )
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="flame-outline" size={44} color={VENT_RED} />
@@ -398,5 +476,146 @@ const createStyles = (theme: AppTheme) =>
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 5,
+    },
+    modeToggleRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginVertical: 4,
+    },
+    modeToggleButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: VENT_RED + '40',
+      backgroundColor: theme.colors.surface,
+    },
+    modeToggleButtonActive: {
+      backgroundColor: VENT_RED,
+      borderColor: VENT_RED,
+    },
+    modeToggleText: {
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    modeToggleTextActive: {
+      color: theme.colors.background,
+    },
+    swipeDeckContainer: {
+      marginVertical: 8,
+    },
+    swipeCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: VENT_RED + '60',
+      padding: 20,
+      gap: 16,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    anonymousBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: VENT_RED + '18',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    anonymousBadgeText: {
+      color: VENT_RED,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    cardAirportTag: {
+      backgroundColor: theme.colors.border + '40',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 8,
+    },
+    cardAirportText: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    cardTitle: {
+      color: theme.colors.text,
+      fontSize: 20,
+      fontWeight: '900',
+      lineHeight: 26,
+    },
+    cardContent: {
+      color: theme.colors.text,
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: '600',
+    },
+    swipeActionsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 10,
+    },
+    swipeSkipButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    swipeSkipText: {
+      color: theme.colors.textMuted,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    swipeUpvoteButton: {
+      flex: 2,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 16,
+      backgroundColor: VENT_RED,
+    },
+    swipeUpvoteButtonActive: {
+      backgroundColor: '#cc111a',
+    },
+    swipeUpvoteText: {
+      color: '#ffffff',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    cardCounter: {
+      textAlign: 'center',
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+      marginTop: 4,
+    },
+    resetButton: {
+      backgroundColor: VENT_RED,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 14,
+      marginTop: 12,
+    },
+    resetButtonText: {
+      color: '#ffffff',
+      fontSize: 14,
+      fontWeight: '800',
     },
   });

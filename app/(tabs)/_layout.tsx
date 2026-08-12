@@ -112,17 +112,6 @@ export default function TabLayout() {
         name="community"
         options={{
           title: 'Community',
-          tabBarLabel: ({ focused, color }) => (
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-              allowFontScaling={false}
-              style={[styles.communityTabLabel, { color }, focused && styles.communityTabLabelFocused]}
-            >
-              Community
-            </Text>
-          ),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
           ),
@@ -169,14 +158,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     marginTop: -1,
-  },
-  communityTabLabel: {
-    textAlign: 'center',
-    fontSize: 7,
-    fontWeight: '800',
-    marginTop: -3,
-  },
-  communityTabLabelFocused: {
-    fontWeight: '900',
   },
 });

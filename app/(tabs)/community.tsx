@@ -586,15 +586,12 @@ export default function CommunityScreen() {
 
         <View style={styles.serverPanel}>
           <View style={styles.serverPanelHeader}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.serverTitle}>Crew Server</Text>
               <Text style={styles.serverSubtitle}>
-                {selectedChannel.label} · {selectedChannel.description}
+                #{selectedChannel.label.toLowerCase().replace(/\s+/g, '-')} · {selectedChannel.description}
               </Text>
             </View>
-            <TouchableOpacity style={styles.serverSearchButton} onPress={() => router.push('/chat')}>
-              <Ionicons name="chatbubbles-outline" size={16} color={theme.colors.accent} />
-            </TouchableOpacity>
           </View>
           <View style={styles.channelGroupRail}>
             {COMMUNITY_CHANNEL_SECTIONS.map((section) => (

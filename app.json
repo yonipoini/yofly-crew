@@ -15,7 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.yoflycrew.app",
       "supportsTablet": true,
-      "buildNumber": "229",
+      "buildNumber": "233",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -76,7 +76,8 @@
           "microphonePermission": "Allow YoFly Crew to use the microphone for voice dictation.",
           "speechRecognitionPermission": "Allow YoFly Crew to use speech recognition to transcribe your voice."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "router": {},

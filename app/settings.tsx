@@ -688,13 +688,11 @@ export default function SettingsScreen() {
             </View>
           </View>
           <Text style={styles.fieldHint}>
-            Unlock unlimited layover guides, AI voice assistant, emergency beacon SOS, and airport lounge perks.
+            Unlock Live Flight Alerts, Emergency Beacon SOS, Unlimited Voice Translator & Dictation, and Unlimited Marketplace Listings.
           </Text>
           <TouchableOpacity
             style={[styles.secondaryActionButton, { marginTop: 12, backgroundColor: theme.colors.primary }]}
-            onPress={() => {
-              Alert.alert('YoFly Pro', 'Manage your YoFly Pro subscription plan ($9.99/mo or $99/yr) or start your 14-day free trial.');
-            }}
+            onPress={() => router.push('/subscription')}
           >
             <Text style={[styles.secondaryActionText, { color: '#000', fontWeight: '800' }]}>Manage YoFly Pro Plan</Text>
           </TouchableOpacity>
