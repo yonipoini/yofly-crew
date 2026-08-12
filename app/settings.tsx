@@ -681,6 +681,26 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.sectionCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.sectionTitle}>YoFly Pro Membership</Text>
+            <View style={{ backgroundColor: theme.colors.primary + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary }}>
+              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '700' }}>14-DAY FREE TRIAL</Text>
+            </View>
+          </View>
+          <Text style={styles.fieldHint}>
+            Unlock unlimited layover guides, AI voice assistant, emergency beacon SOS, and airport lounge perks.
+          </Text>
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, { marginTop: 12, backgroundColor: theme.colors.primary }]}
+            onPress={() => {
+              Alert.alert('YoFly Pro', 'Manage your YoFly Pro subscription plan ($9.99/mo or $99/yr) or start your 14-day free trial.');
+            }}
+          >
+            <Text style={[styles.secondaryActionText, { color: '#000', fontWeight: '800' }]}>Manage YoFly Pro Plan</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Appearance</Text>
           <View style={styles.settingRow}>
             <View style={styles.settingTextWrap}>
