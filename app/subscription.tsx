@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,28 +9,59 @@ import {
   SafeAreaView,
   Alert,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../src/theme/theme';
+import { SubscriptionService } from '../src/services/SubscriptionService';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleStartTrial = () => {
-    Alert.alert(
-      'YoFly Pro Free Trial',
-      `Starting your 14-Day Free Trial on the ${
-        selectedPlan === 'monthly' ? 'Monthly ($9.99/mo)' : 'Annual ($99.00/yr)'
-      } plan. You won't be charged until after day 14.`,
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
+  useEffect(() => {
+    void SubscriptionService.init(user?.id);
+  }, [user?.id]);
+
+  const handleStartTrial = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await SubscriptionService.purchasePlan(selectedPlan);
+      if (result.success) {
+        Alert.alert(
+          'YoFly Pro Activated!',
+          'Welcome to YoFly Pro! Your 14-day free trial is active and all features are unlocked.',
+          [{ text: 'Get Started', onPress: () => router.back() }]
+        );
+      } else if (result.error && result.error !== 'Purchase cancelled.') {
+        Alert.alert('Subscription Info', result.error);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Unable to complete purchase.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleRestorePurchases = () => {
-    Alert.alert('Purchases Restored', 'Your YoFly Pro subscription status has been verified.');
+  const handleRestorePurchases = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await SubscriptionService.restorePurchases();
+      if (result.success && result.isPro) {
+        Alert.alert('Purchases Restored', 'Your YoFly Pro subscription status has been verified.');
+      } else {
+        Alert.alert('No Active Subscription', 'No prior active YoFly Pro subscription was found for this Apple ID / Google account.');
+      }
+    } catch (error: any) {
+      Alert.alert('Restore Failed', error?.message || 'Unable to restore purchases.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -143,21 +174,37 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.actionButton} onPress={handleStartTrial}>
-          <Text style={styles.actionButtonText}>Start 14-Day Free Trial</Text>
+        <TouchableOpacity
+          style={[styles.actionButton, isProcessing && { opacity: 0.7 }]}
+          onPress={handleStartTrial}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <ActivityIndicator color="#000000" />
+          ) : (
+            <Text style={styles.actionButtonText}>Start 14-Day Free Trial</Text>
+          )}
         </TouchableOpacity>
+
+        <View style={styles.disclaimerContainer}>
+          <Text style={[styles.disclaimerText, { color: theme.colors.textMuted }]}>
+            • <Text style={{ fontWeight: '700' }}>14-Day Free Trial:</Text> New subscribers receive a 14-day free trial. You will not be charged if you cancel at least 24 hours before the trial ends.{'\n'}
+            • <Text style={{ fontWeight: '700' }}>Auto-Renewal:</Text> Payment will be charged to your Apple ID / Google Play account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period ($9.99/month for Monthly Plan or $99.00/year for Annual Plan).{'\n'}
+            • <Text style={{ fontWeight: '700' }}>Manage Subscriptions:</Text> You can manage or cancel your subscription at any time in your device Account Settings after purchase.
+          </Text>
+        </View>
 
         <View style={styles.footerLinks}>
           <TouchableOpacity onPress={handleRestorePurchases}>
             <Text style={[styles.footerText, { color: theme.colors.textMuted }]}>Restore Purchases</Text>
           </TouchableOpacity>
           <Text style={[styles.footerText, { color: theme.colors.textMuted }]}> • </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://yoflycrew.com/privacy.html')}>
-            <Text style={[styles.footerText, { color: theme.colors.textMuted }]}>Terms of Service</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://yoflycrew.com/terms.html')}>
+            <Text style={[styles.footerText, { color: '#00E5FF', textDecorationLine: 'underline' }]}>Terms of Use (EULA)</Text>
           </TouchableOpacity>
           <Text style={[styles.footerText, { color: theme.colors.textMuted }]}> • </Text>
           <TouchableOpacity onPress={() => Linking.openURL('https://yoflycrew.com/privacy.html')}>
-            <Text style={[styles.footerText, { color: theme.colors.textMuted }]}>Privacy Policy</Text>
+            <Text style={[styles.footerText, { color: '#00E5FF', textDecorationLine: 'underline' }]}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -293,6 +340,15 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 17,
     fontWeight: '800',
+  },
+  disclaimerContainer: {
+    paddingHorizontal: 8,
+    marginBottom: 20,
+  },
+  disclaimerText: {
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
   },
   footerLinks: {
     flexDirection: 'row',

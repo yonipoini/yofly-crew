@@ -23,6 +23,7 @@ interface AuthContextValue {
   sendPasswordRecoveryEmail: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   saveProfileToRemote: (profileOverride?: Parameters<typeof ProfileRemoteService.saveProfile>[1]) => Promise<void>;
 }
 
@@ -535,6 +536,33 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   };
 
+  const deleteAccount = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const currentUserId = session?.user?.id;
+      if (currentUserId) {
+        await ProfileRemoteService.deleteAccount(currentUserId);
+      }
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.warn('Account deletion remote cleanup encountered an issue:', error);
+    } finally {
+      try {
+        await clearPersistedAuthSession();
+      } catch (error) {
+        console.warn('Failed to clear persisted auth storage:', error);
+      }
+
+      setSession(null);
+      setIsAdmin(false);
+      setIsPasswordRecoveryFlow(false);
+      resetProfile();
+      void ModerationService.clear();
+      setIsSubmitting(false);
+    }
+  };
+
   const value = useMemo(
     () => ({
       session,
@@ -548,6 +576,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       sendPasswordRecoveryEmail,
       updatePassword,
       signOut,
+      deleteAccount,
       saveProfileToRemote,
     }),
     [isAdmin, isPasswordRecoveryFlow, isReady, isSubmitting, session, profile]

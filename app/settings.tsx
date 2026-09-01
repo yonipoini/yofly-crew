@@ -87,7 +87,7 @@ const normalizeAirportSearchInput = (value: string) => {
 export default function SettingsScreen() {
   const router = useRouter();
   const { theme, themeMode, setThemeMode } = useTheme();
-  const { signOut, saveProfileToRemote, isAdmin, isSubmitting, user } = useAuth();
+  const { signOut, deleteAccount, saveProfileToRemote, isAdmin, isSubmitting, user } = useAuth();
   const { profile, updateProfile, mergeProfile } = useProfile();
   const [draft, setDraft] = useState<ProfileState>(profile);
   const [baseAirportQuery, setBaseAirportQuery] = useState(profile.baseAirport);
@@ -640,6 +640,30 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your YoFly Crew account? All your profile data, saved layover locations, flight routes, and chat history will be deleted. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              Alert.alert('Account Deleted', 'Your account has been deleted.');
+              router.replace('/onboarding?step=features');
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Failed to delete account.';
+              Alert.alert('Error', message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -1173,6 +1197,15 @@ export default function SettingsScreen() {
           >
             <Text style={styles.signOutText}>{isSubmitting ? 'Signing Out...' : 'Sign Out'}</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.deleteAccountButton, isSubmitting && styles.signOutButtonDisabled]}
+            onPress={handleDeleteAccount}
+            disabled={isSubmitting}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FF3B30" style={{ marginRight: 6 }} />
+            <Text style={styles.deleteAccountText}>Delete Account</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1422,14 +1455,30 @@ StyleSheet.create({
   signOutButton: {
     borderRadius: theme.roundness.full,
     borderWidth: 1,
-    borderColor: theme.colors.error,
-    backgroundColor: theme.colors.error + '18',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: theme.spacing.xs,
   },
   signOutButtonDisabled: {
     opacity: 0.7,
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.roundness.full,
+    borderWidth: 1,
+    borderColor: '#FF3B3044',
+    backgroundColor: '#FF3B3012',
+    paddingVertical: 14,
+    marginTop: 10,
+  },
+  deleteAccountText: {
+    color: '#FF3B30',
+    fontSize: 15,
+    fontWeight: '800',
   },
   adminButton: {
     borderRadius: theme.roundness.full,

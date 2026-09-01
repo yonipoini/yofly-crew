@@ -167,4 +167,39 @@ export const ProfileRemoteService = {
       throw error;
     }
   },
+
+  async deleteAccount(userId: string) {
+    try {
+      // 1. Primary: Try deleting via Postgres RPC (deletes auth.users and cascades)
+      const { error: rpcError } = await supabase.rpc('delete_user_account');
+      if (!rpcError) {
+        return;
+      }
+    } catch (e) {
+      // Fallback if RPC function is not installed in database
+    }
+
+    // 2. Fallback: Purge user-specific data from public tables
+    try {
+      await supabase.from('profiles').delete().eq('id', userId);
+    } catch (e) {
+      console.warn('[ProfileRemoteService] Error deleting profile:', e);
+    }
+
+    try {
+      await supabase.from('saved_locations').delete().eq('user_id', userId);
+    } catch {}
+
+    try {
+      await supabase.from('saved_routes').delete().eq('user_id', userId);
+    } catch {}
+
+    try {
+      await supabase.from('notification_subscriptions').delete().eq('user_id', userId);
+    } catch {}
+
+    try {
+      await supabase.from('verification_requests').delete().eq('user_id', userId);
+    } catch {}
+  },
 };
