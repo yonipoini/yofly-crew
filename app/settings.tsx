@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -1180,6 +1181,35 @@ export default function SettingsScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
           />
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Legal & Safety</Text>
+          <Text style={styles.fieldHint}>Review our community rules, terms, and child safety compliance standards.</Text>
+          
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+            onPress={() => Linking.openURL('https://yoflycrew.com/child-safety.html')}
+          >
+            <Text style={styles.secondaryActionText}>Child Safety Standards</Text>
+            <Ionicons name="open-outline" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+            onPress={() => Linking.openURL('https://yoflycrew.com/terms.html')}
+          >
+            <Text style={styles.secondaryActionText}>Terms of Service (EULA)</Text>
+            <Ionicons name="open-outline" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, { marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+            onPress={() => Linking.openURL('https://yoflycrew.com/privacy.html')}
+          >
+            <Text style={styles.secondaryActionText}>Privacy Policy</Text>
+            <Ionicons name="open-outline" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionCard}>
