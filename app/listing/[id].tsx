@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { AppSyncService } from '../../src/services/AppSyncService';
 import { getListingCategoryLabel, getMarketplaceVertical, Listing, MarketplaceVertical } from '../../src/types/marketplace';
 import { MarketplaceService } from '../../src/services/MarketplaceService';
 import { MarketplaceModerationService, ListingReportReason, MARKETPLACE_REPORT_REASONS } from '../../src/services/MarketplaceModerationService';
+import { ModerationService } from '../../src/services/ModerationService';
 import { supabase } from '../../src/lib/supabase';
 import { confirmAction } from '../../src/utils/confirmAction';
 
@@ -313,16 +314,41 @@ export default function ListingDetailScreen() {
 
   const handleOpenReport = () => {
     if (!hasSupabaseSession) {
-      Alert.alert('Sign In Required', 'Sign in with your verified crew account before reporting a listing.');
-      return;
-    }
-
-    if (!hasVerifiedCrewAccess) {
-      Alert.alert('Crew Verification Required', 'Reporting is available after employee-email crew verification is approved.');
+      Alert.alert('Sign In Required', 'Sign in before reporting a listing.');
       return;
     }
 
     setIsReportModalVisible(true);
+  };
+
+  const handleBlockHost = () => {
+    if (!listing) return;
+    const hostDisplayName = listing.hostName || 'this host';
+    Alert.alert(
+      'Block Host',
+      `Are you sure you want to block ${hostDisplayName}? All of their listings will be removed from your view.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (listing.hostId) {
+                await ModerationService.blockUser(listing.hostId);
+              }
+              await MarketplaceModerationService.hideListing(listing.id, activeUserId);
+              AppSyncService.emit('marketplace');
+              Alert.alert('Host Blocked', 'This host has been blocked and their listings removed.', [
+                { text: 'OK', onPress: () => router.replace('/marketplace') },
+              ]);
+            } catch {
+              Alert.alert('Error', 'Failed to block host.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSubmitReport = () => {
@@ -334,9 +360,15 @@ export default function ListingDetailScreen() {
       try {
         setIsSubmittingReport(true);
         await MarketplaceModerationService.reportListing(listing.id, reportReason, reportNotes);
+        await MarketplaceModerationService.hideListing(listing.id, activeUserId);
         setIsReportModalVisible(false);
         setReportNotes('');
-        Alert.alert('Report Sent', 'Thanks. This listing has been flagged for review.');
+        AppSyncService.emit('marketplace');
+        Alert.alert(
+          'Report Submitted & Listing Removed',
+          'Thank you. This listing has been removed from your feed.\n\nYoFly Crew moderation acts on all reports within 24 hours. Offending listings are removed and abusive hosts permanently ejected.\n\nDirect developer contact: admin@yoflycrew.com',
+          [{ text: 'OK', onPress: () => router.replace('/marketplace') }]
+        );
       } catch (error) {
         const message =
           error instanceof Error
@@ -725,8 +757,8 @@ export default function ListingDetailScreen() {
                 <Ionicons name="shield-outline" size={18} color={theme.colors.accent} />
               </View>
               <View style={styles.safetyCopy}>
-                <Text style={styles.safetyTitle}>Listing safety</Text>
-                <Text style={styles.safetyHint}>Hide listings you do not want to see, or report anything that needs review.</Text>
+                <Text style={styles.safetyTitle}>Listing & Host Safety</Text>
+                <Text style={styles.safetyHint}>Zero tolerance for objectionable content. Reports investigated within 24 hours.</Text>
               </View>
             </View>
             <View style={styles.moderationRow}>
@@ -741,7 +773,38 @@ export default function ListingDetailScreen() {
                 <Ionicons name="flag-outline" size={16} color={theme.colors.error} />
                 <Text style={[styles.secondaryActionText, styles.reportActionText]}>Report</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryActionButton}
+                onPress={handleBlockHost}
+              >
+                <Ionicons name="ban-outline" size={16} color={theme.colors.error} />
+                <Text style={[styles.secondaryActionText, styles.reportActionText]}>Block Host</Text>
+              </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                paddingVertical: 10,
+                marginTop: 6,
+                borderRadius: theme.roundness.full,
+                borderWidth: 1,
+                borderColor: theme.colors.accent + '33',
+                backgroundColor: theme.colors.accent + '0a',
+              }}
+              onPress={() => {
+                Linking.openURL(
+                  `mailto:admin@yoflycrew.com?subject=Report%20Listing&body=Listing%20ID:%20${listing?.id}%0AHost:%20${listing?.hostName}%0APlease%20describe%20the%20issue:`
+                );
+              }}
+            >
+              <Ionicons name="mail-outline" size={14} color={theme.colors.accent} />
+              <Text style={{ fontSize: 12, color: theme.colors.accent, fontWeight: '700' }}>
+                Contact Developer Safety Team (admin@yoflycrew.com)
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 

@@ -31,6 +31,7 @@ import {
   MarketplaceVertical,
 } from '../src/types/marketplace';
 import { MarketplaceService } from '../src/services/MarketplaceService';
+import { ContentFilterService } from '../src/services/ContentFilterService';
 import { getActiveOpsAirportCode } from '../src/utils/airportContext';
 import { AppSyncService } from '../src/services/AppSyncService';
 import { supabase } from '../src/lib/supabase';
@@ -479,6 +480,16 @@ export default function CreateListingScreen() {
           { text: 'Cancel', style: 'cancel' },
           { text: 'Request Review', onPress: () => router.push('/manual-review') },
         ]
+      );
+      return;
+    }
+
+    const filterResult = ContentFilterService.validatePost(draft.title, draft.description);
+    if (!filterResult.isClean) {
+      Alert.alert(
+        'Objectionable Content Warning',
+        `${filterResult.reason || 'Your listing contains prohibited or objectionable language.'}\n\nYoFly Crew enforces a strict zero-tolerance policy against abusive and objectionable content. Please revise your listing before submitting.`,
+        [{ text: 'OK' }]
       );
       return;
     }

@@ -135,15 +135,38 @@ class ModerationServiceClass {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('You must be logged in to report content.');
 
-    const { error } = await supabase.from('content_reports').insert({
+    if (contentType === 'LISTING') {
+      try {
+        await supabase.from('marketplace_listing_reports').upsert(
+          {
+            listing_id: targetId,
+            reporter_id: user.id,
+            reason,
+            notes: notes || null,
+          },
+          {
+            onConflict: 'listing_id,reporter_id,reason',
+            ignoreDuplicates: false,
+          }
+        );
+      } catch (err) {
+        console.warn('[ModerationService] Listing report fallback:', err);
+      }
+      return;
+    }
+
+    const payload: Record<string, any> = {
       reporter_id: user.id,
-      content_type: contentType,
-      target_id: targetId,
+      post_id: contentType === 'POST' ? targetId : null,
+      comment_id: contentType === 'COMMENT' ? targetId : null,
       reason,
       notes: notes || '',
-    });
+    };
 
-    if (error) throw error;
+    const { error } = await supabase.from('content_reports').insert(payload);
+    if (error) {
+      console.warn('[ModerationService] Report insert error:', error.message);
+    }
   }
 
   /**

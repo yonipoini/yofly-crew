@@ -22,6 +22,7 @@ import {
 } from '../../src/types/marketplace';
 import { MarketplaceService } from '../../src/services/MarketplaceService';
 import { MarketplaceModerationService } from '../../src/services/MarketplaceModerationService';
+import { ModerationService } from '../../src/services/ModerationService';
 import { ChatService } from '../../src/services/ChatService';
 import { ChatRoom } from '../../src/types/chat';
 
@@ -220,6 +221,9 @@ export default function MarketplaceScreen() {
         )
         .filter((listing) =>
           viewMode === 'BROWSE' ? !hiddenListingIds.includes(listing.id) : true
+        )
+        .filter((listing) =>
+          viewMode === 'BROWSE' && listing.hostId ? !ModerationService.isUserBlockedSync(listing.hostId) : true
         )
         .filter((listing) =>
           viewMode === 'BROWSE' && localOnly ? listing.details?.local?.isLocalPickup !== false : true

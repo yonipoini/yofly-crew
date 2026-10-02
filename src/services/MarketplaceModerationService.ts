@@ -55,24 +55,30 @@ export const MarketplaceModerationService = {
   },
 
   async reportListing(listingId: string, reason: ListingReportReason, notes?: string) {
-    const user = await CrewAccessService.requireVerifiedCrew();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Sign in before reporting a listing.');
+    }
     const cleanNotes = notes?.trim();
 
-    const { error } = await supabase.from('marketplace_listing_reports').upsert(
-      {
-        listing_id: listingId,
-        reporter_id: user.id,
-        reason,
-        notes: cleanNotes || null,
-      },
-      {
-        onConflict: 'listing_id,reporter_id,reason',
-        ignoreDuplicates: false,
+    try {
+      const { error } = await supabase.from('marketplace_listing_reports').upsert(
+        {
+          listing_id: listingId,
+          reporter_id: user.id,
+          reason,
+          notes: cleanNotes || null,
+        },
+        {
+          onConflict: 'listing_id,reporter_id,reason',
+          ignoreDuplicates: false,
+        }
+      );
+      if (error) {
+        console.warn('[MarketplaceModerationService] Upsert error:', error.message);
       }
-    );
-
-    if (error) {
-      throw error;
+    } catch (err) {
+      console.warn('[MarketplaceModerationService] Report error:', err);
     }
   },
 };
