@@ -4,6 +4,7 @@ import {
   Alert,
   AlertButton,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Share,
   ScrollView,
@@ -14,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { ModerationService } from '../../src/services/ModerationService';
+import { ContentFilterService } from '../../src/services/ContentFilterService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,8 +71,8 @@ export default function PostDetailScreen() {
         return;
       }
 
-      if (detail && ModerationService.isUserBlockedSync(detail.authorId)) {
-        Alert.alert('Blocked User', 'This post is from a user you blocked.', [
+      if (detail && (ModerationService.isUserBlockedSync(detail.authorId) || ModerationService.isPostHiddenSync(detail.id))) {
+        Alert.alert('Post Unavailable', 'This post has been hidden or is from a blocked user.', [
           { text: 'OK', onPress: () => router.back() }
         ]);
         return;
@@ -169,6 +171,16 @@ export default function PostDetailScreen() {
 
   const handleSendComment = async () => {
     if (!post || !newComment.trim() || post.category === PostCategory.VENT) {
+      return;
+    }
+
+    const filterResult = ContentFilterService.checkContent(newComment);
+    if (!filterResult.isClean) {
+      Alert.alert(
+        'Objectionable Content Warning',
+        `${filterResult.reason || 'Your comment contains prohibited or objectionable language.'}\n\nYoFly Crew enforces a strict zero-tolerance policy against abusive and objectionable content. Please revise your comment before submitting.`,
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -281,19 +293,27 @@ export default function PostDetailScreen() {
 
   const handleCommentOptions = (comment: PostComment) => {
     Alert.alert(
-      'Safety Options',
-      `What would you like to do regarding ${comment.authorName}'s comment?`,
+      'Comment Safety & Options',
+      `Manage comment or report inappropriate activity by ${comment.authorName}:`,
       [
         {
-          text: 'Report Comment',
+          text: 'Hide Comment',
+          onPress: () => {
+            setComments((prev) => prev.filter((c) => c.id !== comment.id));
+            Alert.alert('Comment Hidden', 'This comment has been removed from your view.');
+          },
+        },
+        {
+          text: 'Report Objectionable Comment',
           onPress: () => {
             Alert.alert(
-              'Report Reason',
-              'Why are you reporting this comment?',
+              'Report Comment',
+              'YoFly Crew enforces zero tolerance for objectionable content. Reports are investigated within 24 hours. Offending content is removed and abusive users ejected.\n\nWhy are you reporting this comment?',
               [
-                { text: 'Harassment / Hate Speech', onPress: () => submitCommentReport(comment, 'Harassment / Hate Speech') },
-                { text: 'Spam / Advertising', onPress: () => submitCommentReport(comment, 'Spam / Advertising') },
-                { text: 'Explicit Content', onPress: () => submitCommentReport(comment, 'Explicit Content') },
+                { text: 'Harassment / Abusive Behavior', onPress: () => submitCommentReport(comment, 'Harassment / Abusive Behavior') },
+                { text: 'Hate Speech / Discrimination', onPress: () => submitCommentReport(comment, 'Hate Speech / Discrimination') },
+                { text: 'Explicit / Sexual Content', onPress: () => submitCommentReport(comment, 'Explicit / Sexual Content') },
+                { text: 'Spam / Commercial', onPress: () => submitCommentReport(comment, 'Spam / Commercial') },
                 { text: 'Cancel', style: 'cancel' }
               ]
             );
@@ -305,7 +325,7 @@ export default function PostDetailScreen() {
           onPress: () => {
             Alert.alert(
               'Block User',
-              `Are you sure you want to block ${comment.authorName}? You will no longer see their posts, comments, or messages.`,
+              `Are you sure you want to block ${comment.authorName}? You will no longer see any posts, comments, or messages from them.`,
               [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -314,8 +334,8 @@ export default function PostDetailScreen() {
                   onPress: async () => {
                     try {
                       await ModerationService.blockUser(comment.authorId);
-                      Alert.alert('Blocked', `${comment.authorName} has been blocked.`);
                       setComments(prev => prev.filter(c => c.authorId !== comment.authorId));
+                      Alert.alert('User Blocked', `${comment.authorName} has been blocked and their comments removed.`);
                     } catch (err) {
                       Alert.alert('Error', 'Failed to block user.');
                     }
@@ -323,6 +343,12 @@ export default function PostDetailScreen() {
                 }
               ]
             );
+          }
+        },
+        {
+          text: 'Contact Developer Safety Team',
+          onPress: () => {
+            Linking.openURL(`mailto:admin@yoflycrew.com?subject=Report%20Inappropriate%20Comment&body=Comment%20ID:%20${comment.id}%0AAuthor:%20${comment.authorName}%0APost%20ID:%20${post?.id}%0APlease%20describe%20the%20issue:`);
           }
         },
         { text: 'Cancel', style: 'cancel' }
@@ -333,8 +359,109 @@ export default function PostDetailScreen() {
   const submitCommentReport = async (comment: PostComment, reason: string) => {
     try {
       await ModerationService.reportContent('COMMENT', comment.id, reason);
-      Alert.alert('Report Submitted', 'Thank you. We will review this comment within 24 hours.');
+      // Immediately remove reported comment from the thread view
+      setComments((prev) => prev.filter((c) => c.id !== comment.id));
+      Alert.alert(
+        'Report Submitted & Comment Removed',
+        'Thank you. This comment has been removed from your view.\n\nYoFly Crew moderation acts on all reports within 24 hours. Offending content will be removed and abusive users permanently ejected.\n\nDirect developer contact: admin@yoflycrew.com'
+      );
     } catch (err) {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+  };
+
+  const handleThreadPostOptions = () => {
+    if (!post) return;
+    const isOwnPost = Boolean(user?.id && post.authorId === user.id);
+    const displayAuthorName = post.isAnonymous ? 'Anonymous Crew' : post.authorName;
+    const options: AlertButton[] = [];
+
+    if (!isOwnPost) {
+      options.push(
+        {
+          text: 'Hide Post (Remove from Feed)',
+          onPress: async () => {
+            await ModerationService.hidePost(post.id);
+            Alert.alert('Post Hidden', 'This post has been removed from your feed.', [
+              { text: 'OK', onPress: () => router.back() }
+            ]);
+          }
+        },
+        {
+          text: 'Report Objectionable Content',
+          onPress: () => {
+            Alert.alert(
+              'Report Content',
+              'YoFly Crew has zero tolerance for objectionable content. Reports are investigated within 24 hours. Offending content is removed and abusive users ejected.\n\nWhy are you reporting this post?',
+              [
+                { text: 'Harassment / Abusive Behavior', onPress: () => submitThreadReport('Harassment / Abusive Behavior') },
+                { text: 'Hate Speech / Discrimination', onPress: () => submitThreadReport('Hate Speech / Discrimination') },
+                { text: 'Explicit / Sexual Content', onPress: () => submitThreadReport('Explicit / Sexual Content') },
+                { text: 'Spam / Commercial', onPress: () => submitThreadReport('Spam / Commercial') },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          }
+        },
+        {
+          text: `Block ${displayAuthorName}`,
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Block User',
+              `Are you sure you want to block ${displayAuthorName}? You will no longer see any posts or comments from them.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await ModerationService.blockUser(post.authorId);
+                      await ModerationService.hidePost(post.id);
+                      Alert.alert('User Blocked', 'This user has been blocked.', [
+                        { text: 'OK', onPress: () => router.back() }
+                      ]);
+                    } catch {
+                      Alert.alert('Error', 'Failed to block user.');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        },
+        {
+          text: 'Contact Developer Safety Team',
+          onPress: () => {
+            Linking.openURL(`mailto:admin@yoflycrew.com?subject=Report%20Inappropriate%20Post&body=Post%20ID:%20${post.id}%0APlease%20describe%20the%20issue:`);
+          }
+        }
+      );
+    } else {
+      if (canManagePost) {
+        options.push(
+          { text: 'Edit Post', onPress: () => setIsEditingPost(true) },
+          { text: 'Delete Post', style: 'destructive', onPress: handleDeletePost }
+        );
+      }
+    }
+
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Safety & Content Options', 'Manage this post or report inappropriate activity:', options);
+  };
+
+  const submitThreadReport = async (reason: string) => {
+    if (!post) return;
+    try {
+      await ModerationService.reportContent('POST', post.id, reason);
+      await ModerationService.hidePost(post.id);
+      Alert.alert(
+        'Report Submitted & Post Removed',
+        'Thank you. This post has been removed from your feed.\n\nYoFly Crew moderation acts on all reports within 24 hours. Offending content will be removed and abusive users ejected.\n\nDirect developer contact: admin@yoflycrew.com',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } catch {
       Alert.alert('Error', 'Failed to submit report.');
     }
   };
@@ -401,6 +528,9 @@ export default function PostDetailScreen() {
               size={22}
               color={post.isSaved ? theme.colors.accent : theme.colors.text}
             />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleThreadPostOptions} style={styles.saveButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="ellipsis-horizontal" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
       </View>

@@ -1210,6 +1210,27 @@ export default function SettingsScreen() {
             <Text style={styles.secondaryActionText}>Privacy Policy</Text>
             <Ionicons name="open-outline" size={16} color={theme.colors.textMuted} />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, { marginTop: 12, paddingVertical: 12, backgroundColor: 'rgba(0, 229, 255, 0.08)', borderColor: 'rgba(0, 229, 255, 0.3)', borderWidth: 1 }]}
+            onPress={() => Linking.openURL('mailto:admin@yoflycrew.com?subject=Report%20Inappropriate%20Activity&body=Please%20describe%20the%20user,%20content,%20or%20incident%20you%20are%20reporting:%0A%0ADate/Time:%0AContent%20ID%20(if%20applicable):%0A')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="alert-circle-outline" size={16} color={theme.colors.accent} />
+                  <Text style={[styles.secondaryActionText, { color: theme.colors.accent, fontWeight: '700' }]}>
+                    Report Inappropriate Activity
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 11.5, color: theme.colors.textMuted, marginTop: 4, lineHeight: 16 }}>
+                  Direct Developer Contact: <Text style={{ color: theme.colors.text, fontWeight: '600' }}>admin@yoflycrew.com</Text>
+                  {'\n'}Zero tolerance for objectionable content. Reports investigated within 24 hours.
+                </Text>
+              </View>
+              <Ionicons name="mail-outline" size={20} color={theme.colors.accent} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionCard}>

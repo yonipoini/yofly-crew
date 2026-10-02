@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert, AlertButton } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert, AlertButton, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppTheme, useTheme } from '../theme/theme';
 import { Post, PostCategory } from '../types/community';
@@ -14,6 +14,7 @@ interface PostCardProps {
   onToggleUpvote?: (post: Post) => void;
   onToggleSave?: (post: Post) => void;
   onBlockSuccess?: () => void;
+  onHideSuccess?: () => void;
 }
 
 const getCategoryColor = (theme: AppTheme, category: PostCategory) => {
@@ -35,6 +36,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleUpvote,
   onToggleSave,
   onBlockSuccess,
+  onHideSuccess,
 }) => {
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
@@ -76,15 +78,28 @@ export const PostCard: React.FC<PostCardProps> = ({
       if (!isOwnPost) {
         options.push(
           {
-            text: 'Report Post',
+            text: 'Hide Post (Remove from Feed)',
+            onPress: async () => {
+              try {
+                await ModerationService.hidePost(post.id);
+                Alert.alert('Post Removed', 'This post has been immediately removed from your feed.');
+                onHideSuccess?.();
+              } catch {
+                Alert.alert('Error', 'Unable to hide post.');
+              }
+            }
+          },
+          {
+            text: 'Report Objectionable Content',
             onPress: () => {
               Alert.alert(
                 'Report Content',
-                'Why are you reporting this content?',
+                'YoFly Crew has zero tolerance for objectionable content. Reports are acted upon within 24 hours. Offending content will be removed and abusive users ejected.\n\nWhy are you reporting this post?',
                 [
-                  { text: 'Harassment / Hate Speech', onPress: () => submitReport('Harassment / Hate Speech') },
-                  { text: 'Spam / Advertising', onPress: () => submitReport('Spam / Advertising') },
-                  { text: 'Explicit Content', onPress: () => submitReport('Explicit Content') },
+                  { text: 'Harassment / Abusive Behavior', onPress: () => submitReport('Harassment / Abusive Behavior') },
+                  { text: 'Hate Speech / Discrimination', onPress: () => submitReport('Hate Speech / Discrimination') },
+                  { text: 'Explicit / Sexual Content', onPress: () => submitReport('Explicit / Sexual Content') },
+                  { text: 'Spam / Commercial', onPress: () => submitReport('Spam / Commercial') },
                   { text: 'Cancel', style: 'cancel' }
                 ]
               );
@@ -96,7 +111,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             onPress: () => {
               Alert.alert(
                 'Block User',
-                `Are you sure you want to block this user? You will no longer see their posts, comments, or messages.`,
+                `Are you sure you want to block ${displayAuthorName}? You will no longer see any posts, vents, comments, or messages from them.`,
                 [
                   { text: 'Cancel', style: 'cancel' },
                   {
@@ -105,8 +120,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                     onPress: async () => {
                       try {
                         await ModerationService.blockUser(post.authorId);
-                        Alert.alert('Blocked', 'User has been blocked.');
+                        await ModerationService.hidePost(post.id);
+                        Alert.alert('User Blocked', 'This user has been blocked and their content removed from your feed.');
                         onBlockSuccess?.();
+                        onHideSuccess?.();
                       } catch (err) {
                         Alert.alert('Error', 'Failed to block user.');
                       }
@@ -115,22 +132,40 @@ export const PostCard: React.FC<PostCardProps> = ({
                 ]
               );
             }
+          },
+          {
+            text: 'Contact Developer Safety Team',
+            onPress: () => {
+              Linking.openURL(`mailto:admin@yoflycrew.com?subject=Report%20Inappropriate%20Activity&body=Post%20ID:%20${post.id}%0AAuthor:%20${displayAuthorName}%0APlease%20describe%20the%20issue:`);
+            }
           }
         );
       } else {
-        Alert.alert('Post Options', 'This is your own post.', [{ text: 'OK' }]);
-        return;
+        options.push(
+          {
+            text: 'Hide from My Feed',
+            onPress: async () => {
+              await ModerationService.hidePost(post.id);
+              onHideSuccess?.();
+            }
+          }
+        );
       }
 
       options.push({ text: 'Cancel', style: 'cancel' });
-      Alert.alert('Safety & Moderation', 'Report or block this content:', options);
+      Alert.alert('Safety & Content Options', 'Manage this post or report inappropriate activity:', options);
     });
   };
 
   const submitReport = async (reason: string) => {
     try {
       await ModerationService.reportContent('POST', post.id, reason);
-      Alert.alert('Report Submitted', 'Thank you. We will review this post within 24 hours.');
+      await ModerationService.hidePost(post.id);
+      Alert.alert(
+        'Report Submitted & Post Removed',
+        'Thank you. This post has been removed from your feed.\n\nYoFly Crew moderation acts on all reports within 24 hours. Offending content will be removed and abusive users permanently ejected.\n\nDirect developer contact: admin@yoflycrew.com'
+      );
+      onHideSuccess?.();
     } catch (err) {
       Alert.alert('Error', 'Failed to submit report.');
     }
@@ -142,21 +177,23 @@ export const PostCard: React.FC<PostCardProps> = ({
       onPress={onPress}
       activeOpacity={0.9}
     >
-      <View style={[styles.header, isVentMode && { display: 'none' }]}>
+      <View style={styles.header}>
         <View style={styles.authorInfo}>
-          <View style={styles.avatar}>
-            {post.authorAvatar ? (
+          <View style={[styles.avatar, isVentMode && { backgroundColor: 'rgba(255, 47, 58, 0.15)' }]}>
+            {isVentMode ? (
+              <Ionicons name="eye-off" size={16} color="#ff2f3a" />
+            ) : post.authorAvatar ? (
               <Image source={{ uri: post.authorAvatar }} style={styles.avatarImage} />
             ) : (
               <Ionicons name="person" size={16} color={theme.colors.textMuted} />
             )}
           </View>
           <View>
-            <Text style={styles.authorName}>
+            <Text style={[styles.authorName, isVentMode && { color: '#ff2f3a' }]}>
               {post.isAnonymous ? 'Anonymous Crew' : post.authorName}
             </Text>
             <Text style={styles.metaText}>
-              {post.authorRole} • {formatDistanceToNow(new Date(post.createdAt))} ago
+              {isVentMode ? 'Anonymous Room' : post.authorRole} • {formatDistanceToNow(new Date(post.createdAt))} ago
             </Text>
           </View>
         </View>
@@ -166,8 +203,8 @@ export const PostCard: React.FC<PostCardProps> = ({
               {post.category}
             </Text>
           </View>
-          <TouchableOpacity onPress={handlePostOptions} style={{ padding: 6 }}>
-            <Ionicons name="ellipsis-horizontal" size={16} color={theme.colors.textMuted} />
+          <TouchableOpacity onPress={handlePostOptions} style={{ padding: 6 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>

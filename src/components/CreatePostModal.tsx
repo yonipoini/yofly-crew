@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppTheme, useTheme } from '../theme/theme';
 import { PostCategory } from '../types/community';
+import { ContentFilterService } from '../services/ContentFilterService';
 
 interface CreatePostModalProps {
   visible: boolean;
@@ -102,6 +103,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handleSubmit = () => {
     if (title.trim() && content.trim()) {
+      const filterResult = ContentFilterService.validatePost(title, content);
+      if (!filterResult.isClean) {
+        Alert.alert(
+          'Objectionable Content Warning',
+          `${filterResult.reason || 'Your post contains prohibited or objectionable language.'}\n\nYoFly Crew enforces a strict zero-tolerance policy against abusive and objectionable content. Please revise your text before posting.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const normalizedAirport = airportTag.trim().toUpperCase();
       const structuredTags = [
         normalizedAirport ? `#${normalizedAirport}` : '',
@@ -252,6 +263,33 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               />
             </View>
 
+            {/* Zero Tolerance UGC Banner */}
+            <View style={{
+              marginVertical: 10,
+              padding: 12,
+              borderRadius: 10,
+              backgroundColor: isAnonymous ? 'rgba(255, 47, 58, 0.08)' : 'rgba(0, 229, 255, 0.06)',
+              borderWidth: 1,
+              borderColor: isAnonymous ? 'rgba(255, 47, 58, 0.25)' : 'rgba(0, 229, 255, 0.2)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10
+            }}>
+              <Ionicons 
+                name={isAnonymous ? "alert-circle" : "shield-checkmark"} 
+                size={20} 
+                color={isAnonymous ? "#ff2f3a" : theme.colors.accent} 
+              />
+              <Text style={{ flex: 1, fontSize: 11.5, color: theme.colors.textMuted, lineHeight: 16 }}>
+                <Text style={{ fontWeight: '700', color: isAnonymous ? "#ff2f3a" : theme.colors.text }}>
+                  Zero-Tolerance Community Standards:{' '}
+                </Text>
+                {isAnonymous
+                  ? 'Anonymous posts are strictly monitored. Harassment, objectionable content, and abusive behavior will result in immediate post removal and account ejection within 24 hours.'
+                  : 'All posts must comply with our EULA terms. Objectionable content or abusive behavior will result in post removal and permanent account ejection.'}
+              </Text>
+            </View>
+
             <View style={{ marginBottom: theme.spacing.md }}>
               {photoUri ? (
                 <View style={styles.imagePreviewContainer}>
@@ -267,6 +305,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 </TouchableOpacity>
               )}
             </View>
+
+            <Text style={{ fontSize: 10.5, color: theme.colors.textMuted, textAlign: 'center', marginVertical: 8 }}>
+              By posting, you agree to our Terms (EULA) and zero-tolerance policy against objectionable content.
+            </Text>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

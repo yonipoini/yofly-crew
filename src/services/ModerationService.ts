@@ -2,20 +2,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 
 const BLOCKLIST_STORAGE_KEY = 'yofly_blocked_users';
+const HIDDEN_POSTS_STORAGE_KEY = 'yofly_hidden_posts';
 
 class ModerationServiceClass {
   private blockedUserIds: Set<string> = new Set();
+  private hiddenPostIds: Set<string> = new Set();
 
   /**
-   * Initialize and load the blocked user list from cache and DB
+   * Initialize and load the blocked user list and hidden posts from cache and DB
    */
   async init() {
     try {
       // 1. Load from AsyncStorage for immediate availability
-      const cached = await AsyncStorage.getItem(BLOCKLIST_STORAGE_KEY);
-      if (cached) {
-        const ids: string[] = JSON.parse(cached);
+      const cachedBlocks = await AsyncStorage.getItem(BLOCKLIST_STORAGE_KEY);
+      if (cachedBlocks) {
+        const ids: string[] = JSON.parse(cachedBlocks);
         this.blockedUserIds = new Set(ids);
+      }
+
+      const cachedHidden = await AsyncStorage.getItem(HIDDEN_POSTS_STORAGE_KEY);
+      if (cachedHidden) {
+        const hiddenIds: string[] = JSON.parse(cachedHidden);
+        this.hiddenPostIds = new Set(hiddenIds);
       }
 
       // 2. Fetch fresh list from Supabase if logged in
@@ -139,6 +147,43 @@ class ModerationServiceClass {
   }
 
   /**
+   * Hide a post immediately from the user's feed
+   */
+  async hidePost(postId: string): Promise<void> {
+    if (!postId) return;
+    this.hiddenPostIds.add(postId);
+    await AsyncStorage.setItem(
+      HIDDEN_POSTS_STORAGE_KEY,
+      JSON.stringify(Array.from(this.hiddenPostIds))
+    );
+  }
+
+  /**
+   * Unhide a post
+   */
+  async unhidePost(postId: string): Promise<void> {
+    this.hiddenPostIds.delete(postId);
+    await AsyncStorage.setItem(
+      HIDDEN_POSTS_STORAGE_KEY,
+      JSON.stringify(Array.from(this.hiddenPostIds))
+    );
+  }
+
+  /**
+   * Check if a post is hidden locally
+   */
+  isPostHiddenSync(postId: string): boolean {
+    return this.hiddenPostIds.has(postId);
+  }
+
+  /**
+   * Retrieve all hidden post IDs
+   */
+  getHiddenPostIdsSync(): string[] {
+    return Array.from(this.hiddenPostIds);
+  }
+
+  /**
    * Synchronously check if a user is blocked
    */
   isUserBlockedSync(userId: string): boolean {
@@ -153,11 +198,13 @@ class ModerationServiceClass {
   }
 
   /**
-   * Clear the local blocklist (on logout)
+   * Clear the local blocklist and hidden posts (on logout)
    */
   async clear() {
     this.blockedUserIds.clear();
+    this.hiddenPostIds.clear();
     await AsyncStorage.removeItem(BLOCKLIST_STORAGE_KEY);
+    await AsyncStorage.removeItem(HIDDEN_POSTS_STORAGE_KEY);
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -36,7 +36,8 @@ export default function VentRoomScreen() {
       data.filter(
         (post) =>
           post.category === PostCategory.VENT &&
-          !ModerationService.isUserBlockedSync(post.authorId)
+          !ModerationService.isUserBlockedSync(post.authorId) &&
+          !ModerationService.isPostHiddenSync(post.id)
       )
     );
   }, [user?.id]);
@@ -161,6 +162,99 @@ export default function VentRoomScreen() {
     }
   };
 
+  const handleVentOptions = (vent: Post) => {
+    Alert.alert(
+      'Safety & Content Options',
+      'YoFly Crew maintains a strict zero-tolerance policy against objectionable content. Reports are investigated and acted upon within 24 hours. Offending users will be ejected.',
+      [
+        {
+          text: 'Hide This Vent (Remove from Feed)',
+          onPress: async () => {
+            await ModerationService.hidePost(vent.id);
+            setPosts((prev) => {
+              const updated = prev.filter((p) => p.id !== vent.id);
+              setActiveCardIndex((curr) => (curr >= updated.length ? Math.max(0, updated.length - 1) : curr));
+              return updated;
+            });
+            Alert.alert('Vent Removed', 'This vent has been immediately removed from your feed.');
+          },
+        },
+        {
+          text: 'Report Objectionable Content',
+          onPress: () => {
+            Alert.alert(
+              'Report Vent',
+              'Why are you reporting this vent?',
+              [
+                { text: 'Harassment / Abusive Behavior', onPress: () => submitVentReport(vent, 'Harassment / Abusive Behavior') },
+                { text: 'Hate Speech / Discrimination', onPress: () => submitVentReport(vent, 'Hate Speech / Discrimination') },
+                { text: 'Explicit / Sexual Content', onPress: () => submitVentReport(vent, 'Explicit / Sexual Content') },
+                { text: 'Spam / Commercial', onPress: () => submitVentReport(vent, 'Spam / Commercial') },
+                { text: 'Cancel', style: 'cancel' }
+              ]
+            );
+          },
+        },
+        {
+          text: 'Block Author',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Block Author',
+              'Are you sure you want to block this user? All of their vents and posts will be removed from your view.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await ModerationService.blockUser(vent.authorId);
+                      await ModerationService.hidePost(vent.id);
+                      setPosts((prev) => {
+                        const updated = prev.filter((p) => p.authorId !== vent.authorId);
+                        setActiveCardIndex((curr) => (curr >= updated.length ? Math.max(0, updated.length - 1) : curr));
+                        return updated;
+                      });
+                      Alert.alert('Author Blocked', 'This author has been blocked and their content removed.');
+                    } catch {
+                      Alert.alert('Error', 'Failed to block author.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+        {
+          text: 'Contact Developer Safety Team',
+          onPress: () => {
+            Linking.openURL(`mailto:admin@yoflycrew.com?subject=Report%20Inappropriate%20Vent&body=Vent%20ID:%20${vent.id}%0APlease%20describe%20the%20issue:`);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const submitVentReport = async (vent: Post, reason: string) => {
+    try {
+      await ModerationService.reportContent('POST', vent.id, reason);
+      await ModerationService.hidePost(vent.id);
+      setPosts((prev) => {
+        const updated = prev.filter((p) => p.id !== vent.id);
+        setActiveCardIndex((curr) => (curr >= updated.length ? Math.max(0, updated.length - 1) : curr));
+        return updated;
+      });
+      Alert.alert(
+        'Report Submitted & Vent Removed',
+        'Thank you. This vent has been immediately removed from your feed.\n\nYoFly Crew acts on all reports within 24 hours. Offending content will be removed and abusive users permanently ejected.\n\nDirect developer contact: admin@yoflycrew.com'
+      );
+    } catch {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -245,11 +339,20 @@ export default function VentRoomScreen() {
                         {posts[activeCardIndex].isAnonymous ? 'Anonymous Crew' : posts[activeCardIndex].authorName}
                       </Text>
                     </View>
-                    {posts[activeCardIndex].airportCode ? (
-                      <View style={styles.cardAirportTag}>
-                        <Text style={styles.cardAirportText}>#{posts[activeCardIndex].airportCode}</Text>
-                      </View>
-                    ) : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {posts[activeCardIndex].airportCode ? (
+                        <View style={styles.cardAirportTag}>
+                          <Text style={styles.cardAirportText}>#{posts[activeCardIndex].airportCode}</Text>
+                        </View>
+                      ) : null}
+                      <TouchableOpacity
+                        onPress={() => handleVentOptions(posts[activeCardIndex])}
+                        style={{ padding: 6 }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
                   <Text style={styles.cardTitle}>{posts[activeCardIndex].title}</Text>
@@ -302,6 +405,7 @@ export default function VentRoomScreen() {
                   onToggleUpvote={handleToggleUpvote}
                   onToggleSave={handleToggleSave}
                   onBlockSuccess={loadPosts}
+                  onHideSuccess={loadPosts}
                 />
               ))}
             </View>

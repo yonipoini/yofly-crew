@@ -242,7 +242,7 @@ export default function CommunityScreen() {
   );
   const composerInitialAirportTag = selectedChannel.mode === 'LOCAL' ? profile.baseAirport : '';
   const filteredPosts = posts.filter((post) => {
-    if (ModerationService.isUserBlockedSync(post.authorId)) {
+    if (ModerationService.isUserBlockedSync(post.authorId) || ModerationService.isPostHiddenSync(post.id)) {
       return false;
     }
     const query = searchQuery.trim().toLowerCase();
@@ -887,6 +887,7 @@ export default function CommunityScreen() {
               onToggleUpvote={handleToggleUpvote}
               onToggleSave={handleToggleSave}
               onBlockSuccess={loadPosts}
+              onHideSuccess={loadPosts}
             />
           ))
         ) : (

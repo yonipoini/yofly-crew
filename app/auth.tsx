@@ -360,26 +360,33 @@ export default function AuthScreen() {
               <Text style={styles.eulaParagraph}>
                 This End-User License Agreement ("EULA") is a legal agreement between you and YoFlyCrew LLC.
               </Text>
-              <Text style={styles.eulaSectionHeader}>1. Objectionable Content Policy</Text>
+              <Text style={styles.eulaSectionHeader}>1. Zero-Tolerance Objectionable Content Policy</Text>
               <Text style={styles.eulaParagraph}>
-                YoFly Crew enforces a strict zero-tolerance policy regarding objectionable content and abusive behavior. By using the app, you agree not to post, publish, or transmit any content that:
-                {"\n"}- Is harassing, abusive, threatening, or defamatory to other users.
-                {"\n"}- Promotes hate speech, discrimination, or violence of any kind.
-                {"\n"}- Contains explicit, pornographic, or sexually suggestive material.
-                {"\n"}- Infringes on privacy, copyright, or intellectual property rights.
-                {"\n"}- Promotes commercial spam or illegal activities.
+                YoFly Crew enforces a strict ZERO-TOLERANCE policy regarding objectionable content and abusive users. There is no tolerance for abusive, objectionable, or inappropriate behavior. By using the app, you agree not to post, publish, or transmit any content that:
+                {"\n"}• Is harassing, abusive, threatening, or defamatory to other users.
+                {"\n"}• Promotes hate speech, discrimination, racism, or violence of any kind.
+                {"\n"}• Contains explicit, pornographic, or sexually suggestive material.
+                {"\n"}• Violates personal privacy, copyright, or intellectual property rights.
+                {"\n"}• Promotes commercial spam or illegal activities.
               </Text>
-              <Text style={styles.eulaSectionHeader}>2. Moderation and Enforcement</Text>
+              <Text style={styles.eulaSectionHeader}>2. 24-Hour Moderation & User Ejection</Text>
               <Text style={styles.eulaParagraph}>
-                All user-generated content (including marketplace listings, community posts, comments, and chat messages) is subject to moderation. YoFly Crew reserves the right to:
-                {"\n"}- Review and remove any reported objectionable content within 24 hours of receiving a report.
-                {"\n"}- Suspend, restrict, or permanently terminate accounts of users who violate these terms.
+                All user-generated content (including community posts, anonymous vents, comments, marketplace listings, and messages) is actively monitored. YoFly Crew developers and moderators will act on all objectionable content reports within 24 hours by:
+                {"\n"}• Permanently removing the offending content from the platform.
+                {"\n"}• Permanently ejecting and terminating the account of the user who provided the offending content.
               </Text>
-              <Text style={styles.eulaSectionHeader}>3. Safety Tools (Reporting & Blocking)</Text>
+              <Text style={styles.eulaSectionHeader}>3. In-App Safety Tools (Reporting, Blocking & Feed Removal)</Text>
               <Text style={styles.eulaParagraph}>
-                To ensure a safe environment, YoFly Crew provides:
-                {"\n"}- Reporting: Tap the options menu (...) on any listing, post, or comment to report it for moderator review.
-                {"\n"}- Blocking: You can block any user in chats or on the community boards to instantly hide their posts, comments, and messages from your view.
+                YoFly Crew provides built-in safety controls on every piece of content:
+                {"\n"}• Flagging/Reporting: Tap the options menu (...) on any post, vent, comment, or listing to report it for immediate investigation.
+                {"\n"}• Blocking: Tap "Block User" on any post, comment, or message to permanently block the user and conceal all their content from your view.
+                {"\n"}• Immediate Feed Removal: Tap "Hide Post" or submit a report to immediately remove the content from your feed.
+              </Text>
+              <Text style={styles.eulaSectionHeader}>4. Developer Safety Contact</Text>
+              <Text style={styles.eulaParagraph}>
+                Users may also report inappropriate activity or abusive content directly to the developer at any time:
+                {"\n"}• Developer Contact Email: admin@yoflycrew.com
+                {"\n"}• In-App: Settings &gt; Legal &amp; Safety &gt; Report Inappropriate Activity
               </Text>
             </ScrollView>
             <TouchableOpacity
