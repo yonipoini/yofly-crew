@@ -237,11 +237,11 @@ export const PostCard: React.FC<PostCardProps> = ({
             onPress={() => onToggleUpvote?.(post)}
           >
             <Ionicons 
-              name={post.isUpvoted ? "heart" : "heart-outline"} 
-              size={28} 
-              color={post.isUpvoted ? theme.colors.error : theme.colors.textMuted} 
+              name={isVentMode ? (post.isUpvoted ? "flame" : "flame-outline") : (post.isUpvoted ? "heart" : "heart-outline")} 
+              size={isVentMode ? 24 : 28} 
+              color={post.isUpvoted ? (isVentMode ? '#ff2f3a' : theme.colors.error) : theme.colors.textMuted} 
             />
-            <Text style={[styles.interactionText, post.isUpvoted && { color: theme.colors.error }, { fontSize: 15 }]}>
+            <Text style={[styles.interactionText, post.isUpvoted && { color: isVentMode ? '#ff2f3a' : theme.colors.error }, { fontSize: 15 }]}>
               {post.upvotes}
             </Text>
           </TouchableOpacity>

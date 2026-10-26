@@ -370,13 +370,26 @@ export default function VentRoomScreen() {
                     <TouchableOpacity
                       style={[
                         styles.swipeUpvoteButton,
-                        posts[activeCardIndex].isUpvoted && styles.swipeUpvoteButtonActive,
+                        posts[activeCardIndex].isUpvoted
+                          ? styles.swipeUpvoteButtonActive
+                          : styles.swipeUpvoteButtonInactive,
                       ]}
                       onPress={() => handleToggleUpvote(posts[activeCardIndex])}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons name="flame" size={22} color="#ffffff" />
-                      <Text style={styles.swipeUpvoteText}>
-                        {posts[activeCardIndex].upvotes} {posts[activeCardIndex].isUpvoted ? 'Vented!' : 'Upvote'}
+                      <Ionicons
+                        name={posts[activeCardIndex].isUpvoted ? "flame" : "flame-outline"}
+                        size={22}
+                        color={posts[activeCardIndex].isUpvoted ? "#ffffff" : VENT_RED}
+                      />
+                      <Text
+                        style={[
+                          styles.swipeUpvoteText,
+                          !posts[activeCardIndex].isUpvoted && { color: VENT_RED },
+                        ]}
+                      >
+                        {posts[activeCardIndex].isUpvoted ? '🔥 Vented!' : 'Upvote'}{' '}
+                        ({posts[activeCardIndex].upvotes})
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -693,10 +706,21 @@ const createStyles = (theme: AppTheme) =>
       gap: 8,
       paddingVertical: 14,
       borderRadius: 16,
-      backgroundColor: VENT_RED,
+    },
+    swipeUpvoteButtonInactive: {
+      backgroundColor: 'rgba(255, 47, 58, 0.1)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255, 47, 58, 0.45)',
     },
     swipeUpvoteButtonActive: {
-      backgroundColor: '#cc111a',
+      backgroundColor: VENT_RED,
+      borderWidth: 1.5,
+      borderColor: VENT_RED,
+      shadowColor: VENT_RED,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.5,
+      shadowRadius: 8,
+      elevation: 6,
     },
     swipeUpvoteText: {
       color: '#ffffff',

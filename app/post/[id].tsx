@@ -601,11 +601,16 @@ export default function PostDetailScreen() {
           <View style={styles.interactionRow}>
             <TouchableOpacity style={styles.interactionBtn} onPress={handleToggleUpvote}>
               <Ionicons
-                name={post.isUpvoted ? 'heart' : 'heart-outline'}
+                name={post.category === PostCategory.VENT ? (post.isUpvoted ? 'flame' : 'flame-outline') : (post.isUpvoted ? 'heart' : 'heart-outline')}
                 size={24}
-                color={post.isUpvoted ? theme.colors.error : theme.colors.textMuted}
+                color={post.isUpvoted ? (post.category === PostCategory.VENT ? '#ff2f3a' : theme.colors.error) : theme.colors.textMuted}
               />
-              <Text style={[styles.interactionText, post.isUpvoted && styles.interactionTextActive]}>
+              <Text
+                style={[
+                  styles.interactionText,
+                  post.isUpvoted && (post.category === PostCategory.VENT ? { color: '#ff2f3a' } : styles.interactionTextActive),
+                ]}
+              >
                 {post.upvotes}
               </Text>
             </TouchableOpacity>
