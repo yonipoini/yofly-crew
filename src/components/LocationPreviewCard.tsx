@@ -274,7 +274,7 @@ export const LocationPreviewCard: React.FC<LocationPreviewCardProps> = ({
               <View style={styles.googleMetaCard}>
                 <View style={styles.googleMetaHeader}>
                   <Ionicons name="business-outline" size={13} color={theme.colors.accent} />
-                  <Text style={styles.googleMetaTitle}>Google Business Details</Text>
+                  <Text style={styles.googleMetaTitle}>Place Details</Text>
                 </View>
                 {googleMetadata.map((item) => (
                   <Text key={item} style={styles.googleMetaText}>{item}</Text>
@@ -344,7 +344,7 @@ export const LocationPreviewCard: React.FC<LocationPreviewCardProps> = ({
               </TouchableOpacity>
               <TouchableOpacity style={styles.googleAction} onPress={() => void handleOpenGoogleMaps()}>
                 <Ionicons name="map-outline" size={17} color={theme.colors.accent} />
-                <Text style={styles.googleActionText}>Google</Text>
+                <Text style={styles.googleActionText}>Directions</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.secondaryActionRow}>

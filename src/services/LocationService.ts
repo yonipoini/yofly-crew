@@ -732,8 +732,8 @@ const enrichLocation = (
   const typeLabel = getCrewTypeTag(location.type);
   const reviewSummary =
     location.rating > 0
-      ? `${location.rating.toFixed(1)} rating${location.reviewCount ? ` from ${location.reviewCount} Google reviews` : ''}.`
-      : 'Google Places listing near the selected airport.';
+      ? `${location.rating.toFixed(1)} rating${location.reviewCount ? ` from ${location.reviewCount} verified reviews` : ''}.`
+      : 'Nearby place listing near the selected airport.';
 
   return {
     ...location,
@@ -742,7 +742,7 @@ const enrichLocation = (
     crewTip:
       location.crewTip ||
       (isGoogleBusiness
-        ? `${location.name} is a ${typeLabel.toLowerCase()} listing from Google Places. Check route and current details before heading over.`
+        ? `${location.name} is a ${typeLabel.toLowerCase()} spot. Check route and current details before heading over.`
         : location.airportCore
         ? `Airport-core marker for ${airportCode}. Useful while you are still inside the terminal flow.`
         : getCrewTip(location.type, airportCode)),
@@ -774,7 +774,7 @@ const enrichLocation = (
     routeContext:
       location.routeContext ||
       (isGoogleBusiness
-        ? 'Google business place.'
+        ? 'Local business place.'
         : location.airportCore
         ? `Use this as an inside-airport anchor before moving to the outer ${airportCode} radius.`
         : getRouteContext(location.type, airportCode)),

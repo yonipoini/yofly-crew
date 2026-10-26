@@ -534,9 +534,7 @@ const refreshStoredCalendarSchedule = async (stored: ImportedSchedule, userId?: 
     platformLabel:
       Platform.OS === 'ios'
         ? 'Apple Calendar'
-        : calendar.source?.name?.toLowerCase().includes('google')
-          ? 'Google Calendar'
-          : 'Android Calendar',
+        : 'Device Calendar',
     isRecommended: true,
     matchScore: 0,
   };
@@ -634,9 +632,7 @@ export const ScheduleImportService = {
           platformLabel:
             Platform.OS === 'ios'
               ? 'Apple Calendar'
-              : calendar.source?.name?.toLowerCase().includes('google')
-                ? 'Google Calendar'
-                : 'Android Calendar',
+              : 'Device Calendar',
           isRecommended: score.matchScore >= 4,
           matchScore: score.matchScore,
           matchReason: score.matchReason,
@@ -658,7 +654,7 @@ export const ScheduleImportService = {
     timezone?: string;
   }) {
     if (Platform.OS === 'web') {
-      throw new Error('Calendar import is only available on iPhone and Android devices.');
+      throw new Error('Calendar import is only available on mobile devices.');
     }
 
     const windowStart = params.windowStart || getDefaultWindowStart();

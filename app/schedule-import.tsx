@@ -282,7 +282,7 @@ export default function ScheduleImportScreen() {
             <View style={styles.heroPill}>
               <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
               <Text style={styles.heroPillText}>
-                Calendar access is on{Platform.OS === 'ios' ? ' for Apple Calendar' : ' for Android calendars'}
+                Calendar access is on{Platform.OS === 'ios' ? ' for Apple Calendar' : ' for device calendar'}
               </Text>
             </View>
           ) : (
