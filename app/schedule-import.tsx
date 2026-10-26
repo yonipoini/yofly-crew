@@ -126,7 +126,9 @@ export default function ScheduleImportScreen() {
       if (!access.granted) {
         Alert.alert(
           'Calendar Permission',
-          'Allow calendar access so YoFly can read your synced crew trips from Apple Calendar or your Android calendar.'
+          Platform.OS === 'ios'
+            ? 'Allow calendar access so YoFly can read your synced crew trips from your device calendar.'
+            : 'Allow calendar access so YoFly can read your synced crew trips from your calendar.'
         );
         return;
       }
@@ -269,7 +271,9 @@ export default function ScheduleImportScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.heroCard}>
           <Text style={styles.heroEyebrow}>Crew Calendar Sync</Text>
-          <Text style={styles.heroTitle}>Import trips from Apple or Google calendars</Text>
+          <Text style={styles.heroTitle}>
+            {Platform.OS === 'ios' ? 'Import trips from your device calendar' : 'Import trips from your calendar'}
+          </Text>
           <Text style={styles.heroText}>
             Turn on CrewHub calendar sync, connect your device calendar once, and YoFly can pull the
             detailed trip notes it needs for smarter alerts, airport focus, and layover context.
@@ -476,7 +480,11 @@ export default function ScheduleImportScreen() {
             <Text style={styles.sectionTitle}>How it works</Text>
             <View style={styles.stepRow}>
               <Ionicons name="swap-horizontal-outline" size={18} color={theme.colors.accent} />
-              <Text style={styles.stepText}>Turn on CrewHub calendar sync to Apple Calendar or your Android calendar.</Text>
+              <Text style={styles.stepText}>
+                {Platform.OS === 'ios'
+                  ? 'Turn on CrewHub calendar sync to your Apple Calendar.'
+                  : 'Turn on CrewHub calendar sync to your calendar.'}
+              </Text>
             </View>
             <View style={styles.stepRow}>
               <Ionicons name="document-text-outline" size={18} color={theme.colors.accent} />

@@ -38,30 +38,71 @@ export const DeviceLocationService = {
     return Location.requestForegroundPermissionsAsync();
   },
 
-  async getCurrentLocation(): Promise<DeviceCoordinates | null> {
+  async getLastKnownLocation(): Promise<DeviceCoordinates | null> {
+    const mock = await getMockedCoordsIfRiley();
+    if (mock) return mock;
+
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') return null;
+
+      const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 20 * 60 * 1000 });
+      return lastKnown?.coords ? normalizeCoordinates(lastKnown.coords) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async getCurrentLocation(options?: { requireFresh?: boolean }): Promise<DeviceCoordinates | null> {
     const mock = await getMockedCoordsIfRiley();
     if (mock) {
       return mock;
     }
 
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
-    const currentPromise = (async () => {
-      try {
-        const lastKnown = await Location.getLastKnownPositionAsync();
-        if (lastKnown?.coords) {
-          return normalizeCoordinates(lastKnown.coords);
-        }
-
-        const current = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        return normalizeCoordinates(current.coords);
-      } catch (e) {
+    try {
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const req = await Location.requestForegroundPermissionsAsync();
+        status = req.status;
+      }
+      if (status !== 'granted') {
         return null;
       }
-    })();
 
-    return Promise.race([currentPromise, timeoutPromise]);
+      // Fast path: instant lookup from system location cache (10-50ms)
+      if (!options?.requireFresh) {
+        try {
+          const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 15 * 60 * 1000 });
+          if (lastKnown?.coords) {
+            return normalizeCoordinates(lastKnown.coords);
+          }
+        } catch {
+          // continue to fresh position
+        }
+      }
+
+      // Fresh position with 6000ms safety window
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000));
+      const currentPromise = (async () => {
+        try {
+          const current = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          return normalizeCoordinates(current.coords);
+        } catch (e) {
+          try {
+            const fallback = await Location.getLastKnownPositionAsync();
+            return fallback?.coords ? normalizeCoordinates(fallback.coords) : null;
+          } catch {
+            return null;
+          }
+        }
+      })();
+
+      return Promise.race([currentPromise, timeoutPromise]);
+    } catch {
+      return null;
+    }
   },
 
   async watchLocation(onChange: (coords: DeviceCoordinates) => void) {

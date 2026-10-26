@@ -1700,7 +1700,7 @@ export default function MapScreen() {
       setCuratedLayer('ALL');
       setSelectedType('ALL');
       focusMap(activeAirportCenter, HUB_DELTA);
-      await loadLocations(activeAirportCenter, true, false);
+      void loadLocations(activeAirportCenter, true, false);
 
       try {
         const permission = await DeviceLocationService.requestForegroundPermission();

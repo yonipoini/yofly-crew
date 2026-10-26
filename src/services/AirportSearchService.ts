@@ -102,4 +102,49 @@ export const AirportSearchService = {
   getAirportByCode(code: string): AirportOption | null {
     return this.resolveUsAirport(code);
   },
+
+  getDistanceMiles(
+    pointA: { latitude: number; longitude: number },
+    pointB: { latitude: number; longitude: number }
+  ): number {
+    const toRad = (value: number) => (value * Math.PI) / 180;
+    const earthRadiusMiles = 3958.8;
+    const deltaLat = toRad(pointB.latitude - pointA.latitude);
+    const deltaLon = toRad(pointB.longitude - pointA.longitude);
+    const lat1 = toRad(pointA.latitude);
+    const lat2 = toRad(pointB.latitude);
+    const haversine =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const arc = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    return earthRadiusMiles * arc;
+  },
+
+  findNearestAirport(
+    coords: { latitude: number; longitude: number },
+    maxDistanceMiles = 50
+  ): { airport: AirportOption; distanceMiles: number } | null {
+    if (!coords || typeof coords.latitude !== 'number' || typeof coords.longitude !== 'number') {
+      return null;
+    }
+
+    let closest: { airport: AirportOption; distanceMiles: number } | null = null;
+
+    for (const airport of US_AIRPORTS) {
+      if (typeof airport.latitude !== 'number' || typeof airport.longitude !== 'number') continue;
+      const distance = this.getDistanceMiles(coords, {
+        latitude: airport.latitude,
+        longitude: airport.longitude,
+      });
+
+      if (!closest || distance < closest.distanceMiles) {
+        closest = { airport, distanceMiles: distance };
+      }
+    }
+
+    if (closest && (maxDistanceMiles <= 0 || closest.distanceMiles <= maxDistanceMiles)) {
+      return closest;
+    }
+    return null;
+  },
 };

@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from '../src/theme/theme';
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import SplashScreen from './splash';
 import { View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { NotificationService } from '../src/services/NotificationService';
@@ -123,11 +122,6 @@ function RootNavigator() {
     }
   }, [session, segments, isReady, isProfileReady, isAuthReady, onboardingChecked, mustOnboard]);
 
-  const [hasPlayedSplash, setHasPlayedSplash] = useState(false);
-
-  if (!hasPlayedSplash) {
-    return <SplashScreen onComplete={() => setHasPlayedSplash(true)} />;
-  }
 
   if (!isReady || !isProfileReady || !isAuthReady || (session && !onboardingChecked)) {
     return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;

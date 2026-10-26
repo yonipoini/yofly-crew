@@ -24,6 +24,8 @@ import { OpsIntelService } from '../../src/services/OpsIntelService';
 import { TSAService } from '../../src/services/TSAService';
 import { AppSyncService } from '../../src/services/AppSyncService';
 import { useUnreadNotificationCount } from '../../src/hooks/useUnreadNotificationCount';
+import { DeviceLocationService } from '../../src/services/DeviceLocationService';
+import { AirportSearchService } from '../../src/services/AirportSearchService';
 import { AppTheme, useTheme } from '../../src/theme/theme';
 import { FlightBoardEntry, OpsSignal, CrewOpsSnapshot } from '../../src/types/ops';
 import { TSAStatus } from '../../src/types/tsa';
@@ -92,36 +94,90 @@ export default function HomeScreen() {
   const unreadPulse = React.useRef(new Animated.Value(0)).current;
   const hasUnreadNotifications = unreadCount > 0;
 
+  const [detectedAirport, setDetectedAirport] = useState<{
+    code: string;
+    name: string;
+    distanceMiles: number;
+  } | null>(null);
+  const [userSelectedMode, setUserSelectedMode] = useState<string | null>(null);
+
+  // Fast automatic detection of current airport based on device location
+  useEffect(() => {
+    let isMounted = true;
+    const detectAirport = async () => {
+      try {
+        const coords = await DeviceLocationService.getCurrentLocation();
+        if (!isMounted || !coords) return;
+
+        const nearest = AirportSearchService.findNearestAirport(coords, 35);
+        if (nearest && isMounted) {
+          const airportCode = nearest.airport.code.toUpperCase();
+          setDetectedAirport({
+            code: airportCode,
+            name: nearest.airport.name,
+            distanceMiles: nearest.distanceMiles,
+          });
+        }
+      } catch (err) {
+        console.warn('Auto airport detection skipped:', err);
+      }
+    };
+
+    void detectAirport();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const effectiveOpsMode = userSelectedMode || (detectedAirport ? 'DETECTED' : profile.preferences.opsContextMode);
+
   const selectedOpsAirport =
-    profile.preferences.opsContextMode === 'LAYOVER' && profile.preferences.layoverAirport
+    effectiveOpsMode === 'DETECTED' && detectedAirport
+      ? detectedAirport.code
+      : effectiveOpsMode === 'LAYOVER' && profile.preferences.layoverAirport
       ? profile.preferences.layoverAirport
-      : profile.preferences.opsContextMode === 'TRIP' && profile.preferences.tripAirport
+      : effectiveOpsMode === 'TRIP' && profile.preferences.tripAirport
       ? profile.preferences.tripAirport
-      : profile.preferences.opsContextMode === 'MANUAL'
+      : effectiveOpsMode === 'MANUAL'
       ? profile.preferences.activeOpsAirport || profile.baseAirport || 'JFK'
       : profile.baseAirport || 'JFK';
+
   const airportSelectorCodes = Array.from(
-    new Set([selectedOpsAirport, profile.baseAirport, ...profile.preferences.favoriteAirports].filter(Boolean))
+    new Set(
+      [
+        detectedAirport?.code,
+        selectedOpsAirport,
+        profile.baseAirport,
+        ...profile.preferences.favoriteAirports,
+      ].filter(Boolean) as string[]
+    )
   );
+
   const contextOptions: Array<{
-    key: 'BASE' | 'LAYOVER' | 'TRIP' | 'MANUAL';
+    key: string;
     label: string;
   }> = [
+    ...(detectedAirport
+      ? [{ key: 'DETECTED', label: `📍 Current: ${detectedAirport.code}` }]
+      : []),
     { key: 'BASE', label: `Home base ${profile.baseAirport}` },
     ...(profile.preferences.layoverAirport
-      ? [{ key: 'LAYOVER' as const, label: `Layover ${profile.preferences.layoverAirport}` }]
+      ? [{ key: 'LAYOVER', label: `Layover ${profile.preferences.layoverAirport}` }]
       : []),
     ...(profile.preferences.tripAirport
-      ? [{ key: 'TRIP' as const, label: `Trip stop ${profile.preferences.tripAirport}` }]
+      ? [{ key: 'TRIP', label: `Trip stop ${profile.preferences.tripAirport}` }]
       : []),
-    { key: 'MANUAL' as const, label: 'Choose manually' },
+    { key: 'MANUAL', label: 'Choose manually' },
   ];
+
   const currentFocusLabel =
-    profile.preferences.opsContextMode === 'LAYOVER'
+    effectiveOpsMode === 'DETECTED' && detectedAirport
+      ? `Auto-detected your location at ${detectedAirport.name} (${detectedAirport.code}).`
+      : effectiveOpsMode === 'LAYOVER'
       ? 'Showing updates for your current layover airport.'
-      : profile.preferences.opsContextMode === 'TRIP'
+      : effectiveOpsMode === 'TRIP'
       ? 'Showing updates for the airport tied to your trip.'
-      : profile.preferences.opsContextMode === 'MANUAL'
+      : effectiveOpsMode === 'MANUAL'
       ? 'Pick one saved airport below when you want to look somewhere else.'
       : 'Showing updates for your home base.';
 
@@ -389,10 +445,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.locationPill}>
+          <View style={[styles.locationPill, effectiveOpsMode === 'DETECTED' && { borderColor: theme.colors.accent, backgroundColor: theme.colors.accent + '15' }]}>
             <Ionicons name="location-sharp" size={14} color={theme.colors.accent} />
-            <Text style={styles.locationPillText}>
-              {activeAirportCode} - {activeAirportName}
+            <Text style={[styles.locationPillText, effectiveOpsMode === 'DETECTED' && { color: theme.colors.accent, fontWeight: '700' }]}>
+              {effectiveOpsMode === 'DETECTED' ? `📍 Current Airport: ${activeAirportCode} - ${activeAirportName}` : `${activeAirportCode} - ${activeAirportName}`}
             </Text>
           </View>
 
@@ -564,18 +620,21 @@ export default function HomeScreen() {
             contentContainerStyle={styles.hubSelectorRow}
           >
             {contextOptions.map((option) => {
-              const active = profile.preferences.opsContextMode === option.key;
+              const active = effectiveOpsMode === option.key;
               return (
                 <TouchableOpacity
                   key={option.key}
                   style={[styles.hubChip, active && styles.hubChipActive]}
-                  onPress={() =>
-                    mergeProfile({
-                      preferences: {
-                        opsContextMode: option.key,
-                      },
-                    })
-                  }
+                  onPress={() => {
+                    setUserSelectedMode(option.key);
+                    if (option.key !== 'DETECTED') {
+                      mergeProfile({
+                        preferences: {
+                          opsContextMode: option.key as any,
+                        },
+                      });
+                    }
+                  }}
                 >
                   <Text style={[styles.hubChipText, active && styles.hubChipTextActive]}>
                     {option.label}
@@ -584,7 +643,7 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
-          {profile.preferences.opsContextMode === 'MANUAL' ? (
+          {effectiveOpsMode === 'MANUAL' ? (
             <>
               <Text style={styles.selectorLabel}>Saved airports</Text>
               <ScrollView
