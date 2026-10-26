@@ -55,7 +55,7 @@ export default function SubscriptionScreen() {
       if (result.success && result.isPro) {
         Alert.alert('Purchases Restored', 'Your YoFly Pro subscription status has been verified.');
       } else {
-        Alert.alert('No Active Subscription', 'No prior active YoFly Pro subscription was found for this Apple ID / Google account.');
+        Alert.alert('No Active Subscription', 'No prior active YoFly Pro subscription was found for your Apple ID.');
       }
     } catch (error: any) {
       Alert.alert('Restore Failed', error?.message || 'Unable to restore purchases.');
@@ -189,7 +189,7 @@ export default function SubscriptionScreen() {
         <View style={styles.disclaimerContainer}>
           <Text style={[styles.disclaimerText, { color: theme.colors.textMuted }]}>
             • <Text style={{ fontWeight: '700' }}>14-Day Free Trial:</Text> New subscribers receive a 14-day free trial. You will not be charged if you cancel at least 24 hours before the trial ends.{'\n'}
-            • <Text style={{ fontWeight: '700' }}>Auto-Renewal:</Text> Payment will be charged to your Apple ID / Google Play account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period ($9.99/month for Monthly Plan or $99.00/year for Annual Plan).{'\n'}
+            • <Text style={{ fontWeight: '700' }}>Auto-Renewal:</Text> Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period ($9.99/month for Monthly Plan or $99.00/year for Annual Plan).{'\n'}
             • <Text style={{ fontWeight: '700' }}>Manage Subscriptions:</Text> You can manage or cancel your subscription at any time in your device Account Settings after purchase.
           </Text>
         </View>

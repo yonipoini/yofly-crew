@@ -252,13 +252,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <View style={styles.settingInfo}>
                 <Ionicons name="eye-off-outline" size={20} color={theme.colors.textMuted} />
                 <View>
-                  <Text style={styles.settingLabel}>Post Anonymously</Text>
-                  <Text style={styles.settingSub}>Hide your name and airline role</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.settingLabel}>Post Anonymously</Text>
+                    <View style={{ backgroundColor: 'rgba(255, 47, 58, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(255, 47, 58, 0.4)' }}>
+                      <Text style={{ color: '#ff2f3a', fontSize: 10, fontWeight: '800' }}>18+ ONLY</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.settingSub}>Hide your name and airline role (Must be 18+)</Text>
                 </View>
               </View>
               <Switch
                 value={isAnonymous}
-                onValueChange={setIsAnonymous}
+                onValueChange={(val) => {
+                  if (val) {
+                    Alert.alert(
+                      '18+ Age Requirement',
+                      'Anonymous posting is strictly restricted to users aged 18 and older. By continuing, you certify that you are at least 18 years old and agree to our zero-tolerance standards against objectionable content.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'I am 18+ & Agree', onPress: () => setIsAnonymous(true) }
+                      ]
+                    );
+                  } else {
+                    setIsAnonymous(false);
+                  }
+                }}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               />
             </View>
@@ -282,10 +300,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               />
               <Text style={{ flex: 1, fontSize: 11.5, color: theme.colors.textMuted, lineHeight: 16 }}>
                 <Text style={{ fontWeight: '700', color: isAnonymous ? "#ff2f3a" : theme.colors.text }}>
-                  Zero-Tolerance Community Standards:{' '}
+                  {isAnonymous ? 'Age 18+ & Zero-Tolerance Community Standards: ' : 'Zero-Tolerance Community Standards: '}
                 </Text>
                 {isAnonymous
-                  ? 'Anonymous posts are strictly monitored. Harassment, objectionable content, and abusive behavior will result in immediate post removal and account ejection within 24 hours.'
+                  ? 'Anonymous posting is restricted to adults aged 18 and older. Anonymous posts are strictly monitored. Harassment, objectionable content, and abusive behavior will result in immediate post removal and account ejection within 24 hours.'
                   : 'All posts must comply with our EULA terms. Objectionable content or abusive behavior will result in post removal and permanent account ejection.'}
               </Text>
             </View>
@@ -307,7 +325,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </View>
 
             <Text style={{ fontSize: 10.5, color: theme.colors.textMuted, textAlign: 'center', marginVertical: 8 }}>
-              By posting, you agree to our Terms (EULA) and zero-tolerance policy against objectionable content.
+              By posting, you agree to our Terms (EULA), confirm you are 18+, and adhere to our zero-tolerance policy against objectionable content.
             </Text>
           </ScrollView>
         </View>
