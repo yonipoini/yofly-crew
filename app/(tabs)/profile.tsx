@@ -400,6 +400,9 @@ const createStyles = (theme: AppTheme) =>
     content: {
       padding: theme.spacing.md,
       gap: theme.spacing.md,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     topRow: {
       flexDirection: 'row',

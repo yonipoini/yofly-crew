@@ -895,6 +895,9 @@ const createStyles = (theme: AppTheme) =>
     },
     listContent: {
       padding: theme.spacing.md,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     sellerMessagesCard: {
       marginBottom: theme.spacing.md,

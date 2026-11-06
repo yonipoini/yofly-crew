@@ -463,6 +463,9 @@ const createStyles = (theme: AppTheme) =>
     scrollContent: {
       padding: theme.spacing.md,
       gap: theme.spacing.md,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     header: {
       flexDirection: 'row',

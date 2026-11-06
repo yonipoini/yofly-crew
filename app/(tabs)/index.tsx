@@ -30,6 +30,7 @@ import { AppTheme, useTheme } from '../../src/theme/theme';
 import { FlightBoardEntry, OpsSignal, CrewOpsSnapshot } from '../../src/types/ops';
 import { TSAStatus } from '../../src/types/tsa';
 import { WeatherAlert } from '../../src/types/weather';
+import { useResponsiveLayout } from '../../src/hooks/useResponsiveLayout';
 import {
   getProfileDisplayAirline,
   getProfileDisplayName,
@@ -84,6 +85,7 @@ export default function HomeScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
+  const { isDualScreenOpen, isTablet, isWideScreen } = useResponsiveLayout();
   const [snapshot, setSnapshot] = useState<CrewOpsSnapshot | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTSAModalVisible, setIsTSAModalVisible] = useState(false);
@@ -382,7 +384,14 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 28 }}
+        contentContainerStyle={[
+          { paddingBottom: tabBarHeight + 28 },
+          (isTablet || isWideScreen || isDualScreenOpen) && {
+            maxWidth: 1040,
+            width: '100%',
+            alignSelf: 'center',
+          },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

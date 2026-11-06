@@ -30,6 +30,7 @@ import { PostAlertModal } from '../../src/components/PostAlertModal';
 import mcoRealPlaces from '../../src/services/mcoRealPlaces.json';
 import { FlightTrackerModal } from '../../src/components/FlightTrackerModal';
 import { matchLocationQuery } from '../../src/utils/searchMatcher';
+import { useResponsiveLayout } from '../../src/hooks/useResponsiveLayout';
 
 const { width, height } = Dimensions.get('window');
 const HUB_DELTA = {
@@ -1330,6 +1331,8 @@ export default function MapScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const { isDualScreenOpen, isTablet, isWideScreen } = useResponsiveLayout();
+  const [isDuoDeckOpen, setIsDuoDeckOpen] = useState(true);
   const styles = useMemo(() => createStyles(theme, isDark), [theme, isDark]);
   const isMapboxActive = process.env.EXPO_PUBLIC_USE_MAPBOX === 'true';
   const lastLoadedCenter = useRef<Coordinates | null>(null);
@@ -3882,6 +3885,27 @@ export default function MapScreen() {
             <Ionicons name="airplane" size={16} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />
             <Text style={[styles.mapActionText, { color: '#FFFFFF' }]}>Live Tracker</Text>
           </TouchableOpacity>
+          {isDualScreenOpen && (
+            <TouchableOpacity
+              style={[
+                styles.mapActionButton,
+                { backgroundColor: isDuoDeckOpen ? theme.colors.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') },
+              ]}
+              onPress={() => {
+                setIsDuoDeckOpen((prev) => !prev);
+                setIsDirectoryExpanded(!isDuoDeckOpen);
+              }}
+            >
+              <Ionicons
+                name="browsers-outline"
+                size={16}
+                color={isDuoDeckOpen ? '#000000' : theme.colors.text}
+              />
+              <Text style={[styles.mapActionText, { color: isDuoDeckOpen ? '#000000' : theme.colors.text }]}>
+                {isDuoDeckOpen ? 'Duo Deck: ON' : 'Duo Deck: OFF'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
       {selectedLocation ? (

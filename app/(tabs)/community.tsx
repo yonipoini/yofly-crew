@@ -960,6 +960,9 @@ const createStyles = (theme: AppTheme) =>
     },
     pageScrollContent: {
       flexGrow: 1,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     header: {
       padding: theme.spacing.md,

@@ -515,6 +515,9 @@ const createStyles = (theme: AppTheme) =>
     },
     listContent: {
       padding: theme.spacing.md,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     opsFeedCard: {
       backgroundColor: theme.colors.cardSoft,
