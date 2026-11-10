@@ -224,7 +224,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       (effectiveProfile.verifiedCrew &&
         effectiveProfile.verificationMethod === CrewVerificationMethod.MANUAL_REVIEW);
 
-    const verification = await CrewVerificationService.checkAirlineEmail(user.email, effectiveProfile.roleLabel);
+    const verification = await CrewVerificationService.checkAirlineEmail(
+      user.email,
+      effectiveProfile.roleLabel,
+      effectiveProfile.airline
+    );
 
     if (Date.now() - lastLocalWriteAtRef.current < LOCAL_PROFILE_WRITE_GUARD_MS) {
       return;
@@ -405,7 +409,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     setIsSubmitting(true);
 
     try {
-      const verification = await CrewVerificationService.checkAirlineEmail(email, profile.roleLabel);
+      const verification = await CrewVerificationService.checkAirlineEmail(
+        email,
+        profile.roleLabel,
+        profile.airline
+      );
+
+      if (!verification.matched) {
+        throw new Error(
+          verification.reason || 'You must use an approved airline work email address to register.'
+        );
+      }
 
       const { error } = await supabase.auth.signUp({
         email: verification.normalizedEmail,
@@ -414,7 +428,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
           emailRedirectTo: EMAIL_REDIRECT_TO,
           data: {
             role_label: profile.roleLabel,
-            airline: profile.airline,
+            airline: verification.airlineName || profile.airline,
             base_airport: profile.baseAirport,
           },
         },
@@ -427,18 +441,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       mergeProfile({
         workEmail: verification.normalizedEmail,
         verificationAirline: verification.airlineName,
-        verificationStatus: verification.matched
-          ? CrewVerificationStatus.PENDING_EMAIL
-          : CrewVerificationStatus.PENDING_MANUAL,
-        verificationMethod: verification.matched
-          ? CrewVerificationMethod.AIRLINE_EMAIL
-          : CrewVerificationMethod.MANUAL_REVIEW,
+        verificationStatus: CrewVerificationStatus.PENDING_EMAIL,
+        verificationMethod: CrewVerificationMethod.AIRLINE_EMAIL,
         verifiedCrew: false,
         verifiedMarketplace: false,
-        airline:
-          verification.airlineName && (!profile.airline || profile.airline === 'YoFly Crew')
-            ? verification.airlineName
-            : profile.airline,
+        airline: verification.airlineName || profile.airline,
       });
     } catch (error) {
       throw normalizeAuthError(error);
