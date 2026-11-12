@@ -14,7 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../src/theme/theme';
-import { SubscriptionService } from '../src/services/SubscriptionService';
+import {
+  SubscriptionService,
+  PlanDetailsMap,
+  DEFAULT_PLAN_DETAILS,
+} from '../src/services/SubscriptionService';
 import { useAuth } from '../src/context/AuthContext';
 
 export default function SubscriptionScreen() {
@@ -23,19 +27,36 @@ export default function SubscriptionScreen() {
   const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [planDetails, setPlanDetails] = useState<PlanDetailsMap>(DEFAULT_PLAN_DETAILS);
 
   useEffect(() => {
-    void SubscriptionService.init(user?.id);
+    let active = true;
+    void (async () => {
+      await SubscriptionService.init(user?.id);
+      const details = await SubscriptionService.getPlanDetails();
+      if (active) {
+        setPlanDetails(details);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [user?.id]);
+
+  const selectedPlanDetails = planDetails[selectedPlan];
+  const anyPlanHasTrial = planDetails.monthly.hasFreeTrial || planDetails.annual.hasFreeTrial;
 
   const handleStartTrial = async () => {
     setIsProcessing(true);
     try {
       const result = await SubscriptionService.purchasePlan(selectedPlan);
       if (result.success) {
+        const activationMessage = selectedPlanDetails.hasFreeTrial
+          ? `Welcome to YoFly Pro! Your ${selectedPlanDetails.trialDurationPhrase} free trial is active and all features are unlocked.`
+          : 'Welcome to YoFly Pro! Your subscription is active and all features are unlocked.';
         Alert.alert(
           'YoFly Pro Activated!',
-          'Welcome to YoFly Pro! Your 14-day free trial is active and all features are unlocked.',
+          activationMessage,
           [{ text: 'Get Started', onPress: () => router.back() }]
         );
       } else if (result.error && result.error !== 'Purchase cancelled.') {
@@ -85,7 +106,10 @@ export default function SubscriptionScreen() {
 
         <Text style={[styles.title, { color: theme.colors.text }]}>Unlock Everything with YoFly Pro</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
-          Built exclusively for flight crew. 14 days free, cancel any time.
+          Built exclusively for flight crew.{' '}
+          {anyPlanHasTrial
+            ? `Includes a ${selectedPlanDetails.trialDurationPhrase} free trial, cancel any time.`
+            : 'Cancel any time.'}
         </Text>
 
         <View style={styles.featuresList}>
@@ -148,12 +172,22 @@ export default function SubscriptionScreen() {
           >
             <View style={styles.planHeader}>
               <Text style={[styles.planTitle, { color: theme.colors.text }]}>Monthly Plan</Text>
-              <View style={styles.trialBadge}>
-                <Text style={styles.trialBadgeText}>14-DAY FREE TRIAL</Text>
-              </View>
+              {planDetails.monthly.hasFreeTrial && (
+                <View style={styles.trialBadge}>
+                  <Text style={styles.trialBadgeText}>
+                    {planDetails.monthly.trialTitle.toUpperCase()} FREE TRIAL
+                  </Text>
+                </View>
+              )}
             </View>
-            <Text style={[styles.planPrice, { color: '#00E5FF' }]}>$9.99 <Text style={styles.periodText}>/ month</Text></Text>
-            <Text style={[styles.planSub, { color: theme.colors.textMuted }]}>Cancel anytime during 14-day trial.</Text>
+            <Text style={[styles.planPrice, { color: '#00E5FF' }]}>
+              {planDetails.monthly.priceString} <Text style={styles.periodText}>/ month</Text>
+            </Text>
+            <Text style={[styles.planSub, { color: theme.colors.textMuted }]}>
+              {planDetails.monthly.hasFreeTrial
+                ? `Cancel anytime during ${planDetails.monthly.trialDurationPhrase} trial.`
+                : 'Billed monthly. Cancel anytime.'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -166,11 +200,20 @@ export default function SubscriptionScreen() {
             <View style={styles.planHeader}>
               <Text style={[styles.planTitle, { color: theme.colors.text }]}>Annual Plan</Text>
               <View style={[styles.trialBadge, { backgroundColor: '#34C759' }]}>
-                <Text style={styles.trialBadgeText}>SAVE 17% • 14 DAYS FREE</Text>
+                <Text style={styles.trialBadgeText}>
+                  SAVE {planDetails.savePercent}%
+                  {planDetails.annual.hasFreeTrial
+                    ? ` • ${planDetails.annual.trialTitle.toUpperCase()} FREE`
+                    : ''}
+                </Text>
               </View>
             </View>
-            <Text style={[styles.planPrice, { color: '#00E5FF' }]}>$99.00 <Text style={styles.periodText}>/ year</Text></Text>
-            <Text style={[styles.planSub, { color: theme.colors.textMuted }]}>Equal to $8.25/month billed annually.</Text>
+            <Text style={[styles.planPrice, { color: '#00E5FF' }]}>
+              {planDetails.annual.priceString} <Text style={styles.periodText}>/ year</Text>
+            </Text>
+            <Text style={[styles.planSub, { color: theme.colors.textMuted }]}>
+              Equal to {planDetails.annual.pricePerMonthString || '$8.25'}/month billed annually.
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -182,14 +225,22 @@ export default function SubscriptionScreen() {
           {isProcessing ? (
             <ActivityIndicator color="#000000" />
           ) : (
-            <Text style={styles.actionButtonText}>Start 14-Day Free Trial</Text>
+            <Text style={styles.actionButtonText}>
+              {selectedPlanDetails.hasFreeTrial
+                ? `Start ${selectedPlanDetails.trialTitle} Free Trial`
+                : 'Subscribe Now'}
+            </Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.disclaimerContainer}>
           <Text style={[styles.disclaimerText, { color: theme.colors.textMuted }]}>
-            • <Text style={{ fontWeight: '700' }}>14-Day Free Trial:</Text> New subscribers receive a 14-day free trial. You will not be charged if you cancel at least 24 hours before the trial ends.{'\n'}
-            • <Text style={{ fontWeight: '700' }}>Auto-Renewal:</Text> Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period ($9.99/month for Monthly Plan or $99.00/year for Annual Plan).{'\n'}
+            {selectedPlanDetails.hasFreeTrial ? (
+              <>
+                • <Text style={{ fontWeight: '700' }}>{selectedPlanDetails.trialTitle} Free Trial:</Text> New subscribers receive a {selectedPlanDetails.trialDurationPhrase} free trial. You will not be charged if you cancel at least 24 hours before the trial ends.{'\n'}
+              </>
+            ) : null}
+            • <Text style={{ fontWeight: '700' }}>Auto-Renewal:</Text> Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period ({planDetails.monthly.priceString}/month for Monthly Plan or {planDetails.annual.priceString}/year for Annual Plan).{'\n'}
             • <Text style={{ fontWeight: '700' }}>Manage Subscriptions:</Text> You can manage or cancel your subscription at any time in your device Account Settings after purchase.
           </Text>
         </View>
