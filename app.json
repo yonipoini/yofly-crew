@@ -15,10 +15,12 @@
     "ios": {
       "bundleIdentifier": "com.yoflycrew.app",
       "supportsTablet": true,
-      "buildNumber": "249",
+      "buildNumber": "251",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIRequiresFullScreen": false,
+        "NSCalendarsUsageDescription": "YoFly Crew reads your selected crew calendar (such as a CrewHub or airline iCal schedule) to import flight legs, report times, and layover airports.",
+        "NSCalendarsFullAccessUsageDescription": "YoFly Crew reads your selected crew calendar (such as a CrewHub or airline iCal schedule) to import flight legs, report times, and layover airports.",
         "UISupportedInterfaceOrientations~ipad": [
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortraitUpsideDown",
@@ -81,7 +83,8 @@
           "speechRecognitionPermission": "Allow YoFly Crew to use speech recognition to transcribe your voice."
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-iap"
     ],
     "extra": {
       "router": {},

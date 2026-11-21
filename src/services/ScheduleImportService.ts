@@ -492,6 +492,86 @@ const buildCalendarSchedule = (params: {
   );
 };
 
+const parseIcalDate = (rawValue: string | undefined): Date | null => {
+  if (!rawValue) return null;
+  const cleaned = rawValue.trim();
+  const match = cleaned.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+  if (!match) {
+    const parsed = new Date(cleaned);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const [, year, month, day, hour = '00', minute = '00', second = '00', isUtc] = match;
+  const iso = `${year}-${month}-${day}T${hour}:${minute}:${second}${isUtc ? 'Z' : ''}`;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const unescapeIcalText = (value: string) =>
+  value
+    .replace(/\\n/gi, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
+
+const parseIcalFeedToEvents = (icsText: string, windowStart: Date, windowEnd: Date): Calendar.Event[] => {
+  // Unfold RFC 5545 folded lines (CRLF/LF followed by space or tab)
+  const unfolded = icsText.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+  const lines = unfolded.split(/\r?\n/);
+  const events: Calendar.Event[] = [];
+
+  let inEvent = false;
+  let current: Record<string, string> = {};
+
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') {
+      inEvent = true;
+      current = {};
+      continue;
+    }
+    if (line === 'END:VEVENT') {
+      if (inEvent) {
+        const start = parseIcalDate(current.DTSTART);
+        const end = parseIcalDate(current.DTEND) || start;
+        if (start && start.getTime() <= windowEnd.getTime() && (!end || end.getTime() >= windowStart.getTime())) {
+          events.push({
+            id: current.UID || `ical-${events.length + 1}`,
+            calendarId: 'ical-feed',
+            title: unescapeIcalText(current.SUMMARY || ''),
+            notes: unescapeIcalText(current.DESCRIPTION || ''),
+            location: unescapeIcalText(current.LOCATION || ''),
+            startDate: start.toISOString(),
+            endDate: (end || start).toISOString(),
+            allDay: current.DTSTART_RAW_DATE_ONLY === '1',
+            timeZone: current.DTSTART_TZID || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          } as Calendar.Event);
+        }
+      }
+      inEvent = false;
+      current = {};
+      continue;
+    }
+    if (!inEvent) continue;
+
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1) continue;
+    const rawKey = line.slice(0, colonIndex);
+    const value = line.slice(colonIndex + 1);
+    const [keyName, ...params] = rawKey.split(';');
+    const upperKey = keyName.toUpperCase();
+
+    if (upperKey === 'DTSTART') {
+      current.DTSTART = value;
+      const tzParam = params.find((p) => p.toUpperCase().startsWith('TZID='));
+      if (tzParam) current.DTSTART_TZID = tzParam.slice(5);
+      if (params.some((p) => p.toUpperCase() === 'VALUE=DATE')) current.DTSTART_RAW_DATE_ONLY = '1';
+    } else if (upperKey === 'DTEND' || upperKey === 'SUMMARY' || upperKey === 'DESCRIPTION' || upperKey === 'LOCATION' || upperKey === 'UID') {
+      current[upperKey] = value;
+    }
+  }
+
+  return events;
+};
+
 const getDefaultWindowStart = () => {
   const nextDate = new Date();
   nextDate.setDate(nextDate.getDate() - 7);
@@ -671,6 +751,66 @@ export const ScheduleImportService = {
     if (!schedule.legs.length) {
       throw new Error(
         'We found the calendar, but could not read any usable trip legs yet. Open a CrewHub-synced event that includes trip notes and try again.'
+      );
+    }
+
+    return schedule;
+  },
+
+  async importFromIcalUrl(params: {
+    url: string;
+    windowStart?: Date;
+    windowEnd?: Date;
+    timezone?: string;
+  }) {
+    const trimmed = params.url.trim();
+    if (!trimmed) {
+      throw new Error('Paste your CrewHub or airline iCal (.ics / webcal://) link first.');
+    }
+
+    const normalizedUrl = trimmed
+      .replace(/^webcal:\/\//i, 'https://')
+      .replace(/^webcals:\/\//i, 'https://');
+
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      throw new Error('Please enter a valid https:// or webcal:// iCal calendar link.');
+    }
+
+    const response = await fetch(normalizedUrl);
+    if (!response.ok) {
+      throw new Error(`Could not download the iCal feed (HTTP ${response.status}). Check that the calendar link is active.`);
+    }
+
+    const icsText = await response.text();
+    if (!icsText.includes('BEGIN:VCALENDAR')) {
+      throw new Error('That link did not return a valid iCal (.ics) calendar feed.');
+    }
+
+    const windowStart = params.windowStart || getDefaultWindowStart();
+    const windowEnd = params.windowEnd || getDefaultWindowEnd();
+    const events = parseIcalFeedToEvents(icsText, windowStart, windowEnd);
+
+    const calendar: ImportableCrewCalendar = {
+      id: `ical-${Date.now()}`,
+      title: 'iCal Crew Schedule',
+      sourceName: 'iCal Feed',
+      platformLabel: 'iCal Subscription',
+      isRecommended: true,
+      matchScore: 10,
+      matchReason: 'Direct iCal feed',
+    };
+
+    const schedule = buildCalendarSchedule({
+      calendar,
+      events,
+      timezone: params.timezone,
+      windowStart,
+      windowEnd,
+    });
+
+    if (!schedule.legs.length) {
+      throw new Error(
+        'We connected to your iCal feed, but could not find any flight legs in the current window. Make sure your calendar feed includes trip details.'
       );
     }
 

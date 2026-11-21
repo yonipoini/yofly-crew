@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppTheme, useTheme } from '../src/theme/theme';
 import { useAuth } from '../src/context/AuthContext';
@@ -27,6 +27,7 @@ import { AirportSearchService } from '../src/services/AirportSearchService';
 import { AppSyncService } from '../src/services/AppSyncService';
 import { ProfileMediaService } from '../src/services/ProfileMediaService';
 import { NotificationService } from '../src/services/NotificationService';
+import { SubscriptionService } from '../src/services/SubscriptionService';
 import { getEmergencyContactCountLabel, getPrimaryEmergencyPhone, normalizeEmergencyContacts } from '../src/utils/beaconSOS';
 import { syncProfileAirportSelection } from '../src/utils/profileAirportSync';
 import {
@@ -104,6 +105,21 @@ export default function SettingsScreen() {
   const [hasLocalEdits, setHasLocalEdits] = useState(false);
   const [baseAirportDebug, setBaseAirportDebug] = useState('');
   const [confirmedBaseAirportCode, setConfirmedBaseAirportCode] = useState('');
+  const [isProMember, setIsProMember] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void SubscriptionService.checkProStatus().then((pro) => {
+        if (active) {
+          setIsProMember(pro);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
   const styles = useMemo(() => createStyles(theme), [theme]);
   const webButtonStyle = useMemo(
     () => ({
@@ -699,6 +715,31 @@ export default function SettingsScreen() {
             <Ionicons name="airplane-outline" size={13} color={theme.colors.accent} />
             <Text style={styles.airlineBadgeText}>{draft.airline || 'YoFly Crew'}</Text>
           </View>
+          {isProMember && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: '#00E5FF66',
+                backgroundColor: '#00E5FF14',
+              }}
+            >
+              <Image
+                source={require('../assets/yofly_crew_pro_elite_badge_clean.png')}
+                style={{ width: 32, height: 32 }}
+                resizeMode="contain"
+              />
+              <Text style={{ color: '#00E5FF', fontSize: 13, fontWeight: '800' }}>
+                YoFly Crew Pro Elite
+              </Text>
+            </View>
+          )}
           <Text style={styles.heroBaseLabel}>{fullBaseLabel}</Text>
           <TouchableOpacity style={styles.changePhotoButton} onPress={handlePickPhoto}>
             <Text style={styles.changePhotoText}>Change Photo</Text>
@@ -707,9 +748,20 @@ export default function SettingsScreen() {
 
         <View style={styles.sectionCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={styles.sectionTitle}>YoFly Pro Membership</Text>
-            <View style={{ backgroundColor: theme.colors.primary + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary }}>
-              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: '700' }}>14-DAY FREE TRIAL</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {isProMember && (
+                <Image
+                  source={require('../assets/yofly_crew_pro_elite_badge_clean.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode="contain"
+                />
+              )}
+              <Text style={styles.sectionTitle}>YoFly Pro Membership</Text>
+            </View>
+            <View style={{ backgroundColor: (isProMember ? '#34C759' : theme.colors.primary) + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: isProMember ? '#34C759' : theme.colors.primary }}>
+              <Text style={{ color: isProMember ? '#34C759' : theme.colors.primary, fontSize: 12, fontWeight: '700' }}>
+                {isProMember ? 'ACTIVE PRO' : 'PRO'}
+              </Text>
             </View>
           </View>
           <Text style={styles.fieldHint}>

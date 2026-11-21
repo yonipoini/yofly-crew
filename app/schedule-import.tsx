@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,6 +39,8 @@ export default function ScheduleImportScreen() {
   const [isImporting, setIsImporting] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [activeCalendarId, setActiveCalendarId] = useState<string | null>(null);
+  const [icalUrl, setIcalUrl] = useState('');
+  const [isImportingIcal, setIsImportingIcal] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -124,12 +128,21 @@ export default function ScheduleImportScreen() {
       setCalendarAccessGranted(access.granted);
 
       if (!access.granted) {
-        Alert.alert(
-          'Calendar Permission',
-          Platform.OS === 'ios'
-            ? 'Allow calendar access so YoFly can read your synced crew trips from your device calendar.'
-            : 'Allow calendar access so YoFly can read your synced crew trips from your calendar.'
-        );
+        if (!access.canAskAgain) {
+          Alert.alert(
+            'Calendar Access Disabled',
+            'Calendar access is turned off in your device settings. You can enable Full Access under Settings → YoFly Crew → Calendars, or import via iCal link or screenshot below.',
+            [
+              { text: 'Not Now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Calendar Access',
+            'You can enable Apple Calendar access anytime to sync trips automatically, or use the iCal link or screenshot import below.'
+          );
+        }
         return;
       }
 
@@ -156,6 +169,21 @@ export default function ScheduleImportScreen() {
       Alert.alert('Calendar Import Failed', message);
     } finally {
       setActiveCalendarId(null);
+    }
+  };
+
+  const handleImportIcalUrl = async () => {
+    setIsImportingIcal(true);
+
+    try {
+      const nextSchedule = await ScheduleImportService.importFromIcalUrl({ url: icalUrl });
+      setImportedSchedule(nextSchedule);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to sync that iCal feed right now.';
+      Alert.alert('iCal Sync Failed', message);
+    } finally {
+      setIsImportingIcal(false);
     }
   };
 
@@ -293,7 +321,11 @@ export default function ScheduleImportScreen() {
             >
               <Ionicons name="calendar-outline" size={18} color={theme.colors.background} />
               <Text style={styles.primaryButtonText}>
-                {isRequestingCalendarAccess ? 'Requesting Access...' : 'Allow Calendar Access'}
+                {isRequestingCalendarAccess
+                  ? 'Connecting...'
+                  : Platform.OS === 'ios'
+                    ? 'Connect Apple Calendar'
+                    : 'Connect Device Calendar'}
               </Text>
             </TouchableOpacity>
           )}
@@ -377,6 +409,47 @@ export default function ScheduleImportScreen() {
               ))}
             </View>
           ) : null}
+        </View>
+
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Direct iCal (.ics / webcal) Sync</Text>
+            <Text style={styles.sectionMeta}>Optional</Text>
+          </View>
+          <Text style={styles.supportText}>
+            Paste your CrewHub, FLICA, or airline iCal subscription URL (`webcal://` or `https://...ics`) to
+            sync upcoming trips directly without needing device calendar permissions.
+          </Text>
+          <TextInput
+            value={icalUrl}
+            onChangeText={setIcalUrl}
+            placeholder="webcal:// or https://...schedule.ics"
+            placeholderTextColor={theme.colors.textMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              fontSize: 14,
+              marginBottom: 12,
+            }}
+          />
+          <TouchableOpacity
+            style={[styles.secondaryActionButton, (isImportingIcal || !icalUrl.trim()) && styles.disabledButton]}
+            onPress={() => void handleImportIcalUrl()}
+            disabled={isImportingIcal || !icalUrl.trim()}
+          >
+            <Ionicons name="link-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.secondaryActionText}>
+              {isImportingIcal ? 'Syncing iCal Feed...' : 'Import from iCal Link'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionCard}>

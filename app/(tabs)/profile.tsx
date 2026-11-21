@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AppTheme, useTheme } from '../../src/theme/theme';
 import { BeaconSOSModal } from '../../src/components/BeaconSOSModal';
@@ -11,6 +11,7 @@ import { useProfile } from '../../src/context/ProfileContext';
 import { AppSyncService } from '../../src/services/AppSyncService';
 import { CrewVerificationService } from '../../src/services/CrewVerificationService';
 import { SOSManager } from '../../src/services/SOSManager';
+import { SubscriptionService } from '../../src/services/SubscriptionService';
 import { EmergencyContact } from '../../src/types/safety';
 import { CrewVerificationStatus } from '../../src/types/verification';
 import { getEmergencyContactCountLabel, getPrimaryEmergencyPhone, normalizeEmergencyContacts } from '../../src/utils/beaconSOS';
@@ -50,6 +51,21 @@ export default function ProfileScreen() {
   const displayAirline = getProfileDisplayAirline(profile);
   const displayEmail = getProfileDisplayEmail(profile, user?.email);
   const [isBeaconModalVisible, setIsBeaconModalVisible] = useState(false);
+  const [isProMember, setIsProMember] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void SubscriptionService.checkProStatus().then((pro) => {
+        if (active) {
+          setIsProMember(pro);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
   const beaconContacts = useMemo(
     () => normalizeEmergencyContacts(profile.emergencyContacts, profile.emergencyPhone),
     [profile.emergencyContacts, profile.emergencyPhone]
@@ -208,6 +224,33 @@ export default function ProfileScreen() {
                 <Ionicons name="airplane-outline" size={13} color={theme.colors.accent} />
                 <Text style={styles.airlineBadgeText}>{displayAirline}</Text>
               </View>
+              {isProMember && (
+                <TouchableOpacity
+                  onPress={() => router.push('/subscription')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 6,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#00E5FF66',
+                    backgroundColor: '#00E5FF14',
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  <Image
+                    source={require('../../assets/yofly_crew_pro_elite_badge_clean.png')}
+                    style={{ width: 28, height: 28 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={{ color: '#00E5FF', fontSize: 12, fontWeight: '800' }}>
+                    YoFly Crew Pro Elite
+                  </Text>
+                </TouchableOpacity>
+              )}
               <Text style={styles.email}>{displayEmail}</Text>
               {profile.preferences.favoriteAirports && profile.preferences.favoriteAirports.length > 0 ? (
                 <View style={styles.hubsRow}>

@@ -44,7 +44,6 @@ export default function SubscriptionScreen() {
   }, [user?.id]);
 
   const selectedPlanDetails = planDetails[selectedPlan];
-  const anyPlanHasTrial = planDetails.monthly.hasFreeTrial || planDetails.annual.hasFreeTrial;
 
   const handleStartTrial = async () => {
     setIsProcessing(true);
@@ -107,7 +106,7 @@ export default function SubscriptionScreen() {
         <Text style={[styles.title, { color: theme.colors.text }]}>Unlock Everything with YoFly Pro</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
           Built exclusively for flight crew.{' '}
-          {anyPlanHasTrial
+          {selectedPlanDetails.hasFreeTrial
             ? `Includes a ${selectedPlanDetails.trialDurationPhrase} free trial, cancel any time.`
             : 'Cancel any time.'}
         </Text>
@@ -212,7 +211,9 @@ export default function SubscriptionScreen() {
               {planDetails.annual.priceString} <Text style={styles.periodText}>/ year</Text>
             </Text>
             <Text style={[styles.planSub, { color: theme.colors.textMuted }]}>
-              Equal to {planDetails.annual.pricePerMonthString || '$8.25'}/month billed annually.
+              {planDetails.annual.pricePerMonthString
+                ? `Equal to ${planDetails.annual.pricePerMonthString}/month billed annually.`
+                : 'Billed annually. Cancel anytime.'}
             </Text>
           </TouchableOpacity>
         </View>
